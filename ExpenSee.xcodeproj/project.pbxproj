@@ -45,6 +45,16 @@
 			path = ExpenSeeUITests;
 			sourceTree = "<group>";
 		};
+		F5DAFD2F3030BCFA00957CDF /* ExpenSeeWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ExpenSeeWidget;
+			sourceTree = "<group>";
+		};
+		F5DAFD413030BD7400957CDF /* ExpenSeeCore */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = ExpenSeeCore;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,6 +85,8 @@
 		F5DAFCF93030BA3200957CDF = {
 			isa = PBXGroup;
 			children = (
+				F5DAFD413030BD7400957CDF /* ExpenSeeCore */,
+				F5DAFD2F3030BCFA00957CDF /* ExpenSeeWidget */,
 				F5DAFD043030BA3200957CDF /* ExpenSee */,
 				F5DAFD143030BA3400957CDF /* ExpenSeeTests */,
 				F5DAFD1E3030BA3400957CDF /* ExpenSeeUITests */,
@@ -109,6 +121,8 @@
 			);
 			fileSystemSynchronizedGroups = (
 				F5DAFD043030BA3200957CDF /* ExpenSee */,
+				F5DAFD2F3030BCFA00957CDF /* ExpenSeeWidget */,
+				F5DAFD413030BD7400957CDF /* ExpenSeeCore */,
 			);
 			name = ExpenSee;
 			packageProductDependencies = (
