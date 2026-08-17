@@ -2,6 +2,20 @@
 //  ExpenSeeWidgetBundle.swift
 //  ExpenSee
 //
-//  Created by Harvy Angelo Tan on 8/15/26.
+//  Created by Harvy Angelo Tan on 8/16/26.
 //
 
+import WidgetKit
+import SwiftUI
+
+@main
+struct ExpenSeeWidgetBundle: WidgetBundle {
+    var body: some Widget {
+        DailyBudgetWidget()
+        QuickLogWidget()
+        
+        #if os(iOS)
+        SpendingLiveActivity()
+        #endif
+    }
+}

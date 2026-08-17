@@ -7,26 +7,34 @@
 
 import SwiftUI
 import SwiftData
+import ExpenSeeCore
 
 @main
 struct ExpenSeeApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
-
+    private let container = ModelContainerFactory.shared
+    
+    @StateObject private var liveActivityManager = LiveActivityManager.shared
+    @StateObject private var settings = SettingsViewModel()
+    @State private var showAddExpenseSheet = false
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(showAddExpenseSheet: $showAddExpenseSheet)
+                .modelContainer(container)
+                .environmentObject(liveActivityManager)
+                .environmentObject(settings)
+                .preferredColorScheme(settings.appTheme.colorScheme)
+                .onOpenURL { url in
+                    if url.scheme == "expen-see" && (url.host == "add-expense" || url.host == "log") {
+                        showAddExpenseSheet = true
+                    }
+                }
         }
-        .modelContainer(sharedModelContainer)
     }
+}
+
+#Preview {
+    ContentView(showAddExpenseSheet: .constant(false))
+        .modelContainer(ModelContainerFactory.shared)
+        .environmentObject(SettingsViewModel())
 }

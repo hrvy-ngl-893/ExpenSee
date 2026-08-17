@@ -6,6 +6,14 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		F52103FF30318E7600C460CD /* ExpenSeeCore in Frameworks */ = {isa = PBXBuildFile; productRef = F52103FE30318E7600C460CD /* ExpenSeeCore */; };
+		F5ED44903031E3F200D9F64C /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F5DAFF703030D30500957CDF /* WidgetKit.framework */; };
+		F5ED44913031E3F200D9F64C /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F5DAFF723030D30500957CDF /* SwiftUI.framework */; };
+		F5ED44A23031E3F300D9F64C /* ExpenSeeWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F5ED448F3031E3F200D9F64C /* ExpenSeeWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		F5ED44BD3031E41B00D9F64C /* ExpenSeeCore in Frameworks */ = {isa = PBXBuildFile; productRef = F5ED44BC3031E41B00D9F64C /* ExpenSeeCore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		F5DAFD123030BA3400957CDF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -21,17 +29,91 @@
 			remoteGlobalIDString = F5DAFD013030BA3200957CDF;
 			remoteInfo = ExpenSee;
 		};
+		F5ED44A03031E3F300D9F64C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = F5DAFCFA3030BA3200957CDF /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F5ED448E3031E3F200D9F64C;
+			remoteInfo = ExpenSeeWidgetExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		F5DAFE0E3030C90300957CDF /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F5DAFF893030D30700957CDF /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				F5ED44A23031E3F300D9F64C /* ExpenSeeWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		F5DAFD023030BA3200957CDF /* ExpenSee.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ExpenSee.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F5DAFD113030BA3400957CDF /* ExpenSeeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ExpenSeeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F5DAFD1B3030BA3400957CDF /* ExpenSeeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ExpenSeeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F5DAFF703030D30500957CDF /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		F5DAFF723030D30500957CDF /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		F5ED448F3031E3F200D9F64C /* ExpenSeeWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ExpenSeeWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		F5ED44C63031F27500D9F64C /* ExpenSeeWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ExpenSeeWidgetExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		F5569A4430317CCD001F5CA1 /* Exceptions for "ExpenSeeWidget" folder in "ExpenSee" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Assets.xcassets,
+				ExpenSeeWidgetBundle.swift,
+				Info.plist,
+			);
+			target = F5DAFD013030BA3200957CDF /* ExpenSee */;
+		};
+		F5ED44A63031E3F300D9F64C /* Exceptions for "ExpenSeeWidget" folder in "ExpenSeeWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F5ED448E3031E3F200D9F64C /* ExpenSeeWidgetExtension */;
+		};
+		F5ED44C53031E79400D9F64C /* Exceptions for "ExpenSeeWidget" folder in "ExpenSeeWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				ExpenSeeWidgetBundle.swift,
+			);
+			target = F5ED448E3031E3F200D9F64C /* ExpenSeeWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
+		F5DAFDDA3030C37D00957CDF /* Exceptions for "ExpenSee" folder in "Compile Sources" phase from "ExpenSee" target */ = {
+			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
+			buildPhase = F5DAFCFE3030BA3200957CDF /* Sources */;
+			membershipExceptions = (
+				ExpenSee.entitlements,
+			);
+		};
+/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		F5DAFD043030BA3200957CDF /* ExpenSee */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F5DAFDDA3030C37D00957CDF /* Exceptions for "ExpenSee" folder in "Compile Sources" phase from "ExpenSee" target */,
+			);
 			path = ExpenSee;
 			sourceTree = "<group>";
 		};
@@ -47,12 +129,19 @@
 		};
 		F5DAFD2F3030BCFA00957CDF /* ExpenSeeWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F5569A4430317CCD001F5CA1 /* Exceptions for "ExpenSeeWidget" folder in "ExpenSee" target */,
+				F5ED44C53031E79400D9F64C /* Exceptions for "ExpenSeeWidget" folder in "ExpenSeeWidgetExtension" target */,
+			);
 			path = ExpenSeeWidget;
 			sourceTree = "<group>";
 		};
-		F5DAFD413030BD7400957CDF /* ExpenSeeCore */ = {
+		F5ED44923031E3F200D9F64C /* ExpenSeeWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = ExpenSeeCore;
+			exceptions = (
+				F5ED44A63031E3F300D9F64C /* Exceptions for "ExpenSeeWidget" folder in "ExpenSeeWidgetExtension" target */,
+			);
+			path = ExpenSeeWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -62,6 +151,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F52103FF30318E7600C460CD /* ExpenSeeCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -79,17 +169,29 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F5ED448C3031E3F200D9F64C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F5ED44BD3031E41B00D9F64C /* ExpenSeeCore in Frameworks */,
+				F5ED44913031E3F200D9F64C /* SwiftUI.framework in Frameworks */,
+				F5ED44903031E3F200D9F64C /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		F5DAFCF93030BA3200957CDF = {
 			isa = PBXGroup;
 			children = (
-				F5DAFD413030BD7400957CDF /* ExpenSeeCore */,
+				F5ED44C63031F27500D9F64C /* ExpenSeeWidgetExtension.entitlements */,
 				F5DAFD2F3030BCFA00957CDF /* ExpenSeeWidget */,
 				F5DAFD043030BA3200957CDF /* ExpenSee */,
 				F5DAFD143030BA3400957CDF /* ExpenSeeTests */,
 				F5DAFD1E3030BA3400957CDF /* ExpenSeeUITests */,
+				F5ED44923031E3F200D9F64C /* ExpenSeeWidget */,
+				F5DAFF6F3030D30500957CDF /* Frameworks */,
 				F5DAFD033030BA3200957CDF /* Products */,
 			);
 			sourceTree = "<group>";
@@ -100,8 +202,18 @@
 				F5DAFD023030BA3200957CDF /* ExpenSee.app */,
 				F5DAFD113030BA3400957CDF /* ExpenSeeTests.xctest */,
 				F5DAFD1B3030BA3400957CDF /* ExpenSeeUITests.xctest */,
+				F5ED448F3031E3F200D9F64C /* ExpenSeeWidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		F5DAFF6F3030D30500957CDF /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				F5DAFF703030D30500957CDF /* WidgetKit.framework */,
+				F5DAFF723030D30500957CDF /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -114,18 +226,21 @@
 				F5DAFCFE3030BA3200957CDF /* Sources */,
 				F5DAFCFF3030BA3200957CDF /* Frameworks */,
 				F5DAFD003030BA3200957CDF /* Resources */,
+				F5DAFE0E3030C90300957CDF /* Embed Frameworks */,
+				F5DAFF893030D30700957CDF /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				F5ED44A13031E3F300D9F64C /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				F5DAFD043030BA3200957CDF /* ExpenSee */,
 				F5DAFD2F3030BCFA00957CDF /* ExpenSeeWidget */,
-				F5DAFD413030BD7400957CDF /* ExpenSeeCore */,
 			);
 			name = ExpenSee;
 			packageProductDependencies = (
+				F52103FE30318E7600C460CD /* ExpenSeeCore */,
 			);
 			productName = ExpenSee;
 			productReference = F5DAFD023030BA3200957CDF /* ExpenSee.app */;
@@ -177,6 +292,29 @@
 			productReference = F5DAFD1B3030BA3400957CDF /* ExpenSeeUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		F5ED448E3031E3F200D9F64C /* ExpenSeeWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F5ED44A33031E3F300D9F64C /* Build configuration list for PBXNativeTarget "ExpenSeeWidgetExtension" */;
+			buildPhases = (
+				F5ED448B3031E3F200D9F64C /* Sources */,
+				F5ED448C3031E3F200D9F64C /* Frameworks */,
+				F5ED448D3031E3F200D9F64C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F5ED44923031E3F200D9F64C /* ExpenSeeWidget */,
+			);
+			name = ExpenSeeWidgetExtension;
+			packageProductDependencies = (
+				F5ED44BC3031E41B00D9F64C /* ExpenSeeCore */,
+			);
+			productName = ExpenSeeWidgetExtension;
+			productReference = F5ED448F3031E3F200D9F64C /* ExpenSeeWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -198,6 +336,9 @@
 						CreatedOnToolsVersion = 26.6;
 						TestTargetID = F5DAFD013030BA3200957CDF;
 					};
+					F5ED448E3031E3F200D9F64C = {
+						CreatedOnToolsVersion = 26.6;
+					};
 				};
 			};
 			buildConfigurationList = F5DAFCFD3030BA3200957CDF /* Build configuration list for PBXProject "ExpenSee" */;
@@ -209,6 +350,9 @@
 			);
 			mainGroup = F5DAFCF93030BA3200957CDF;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F52103FD30318B6600C460CD /* XCLocalSwiftPackageReference "ExpenSeeCore" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F5DAFD033030BA3200957CDF /* Products */;
 			projectDirPath = "";
@@ -217,6 +361,7 @@
 				F5DAFD013030BA3200957CDF /* ExpenSee */,
 				F5DAFD103030BA3400957CDF /* ExpenSeeTests */,
 				F5DAFD1A3030BA3400957CDF /* ExpenSeeUITests */,
+				F5ED448E3031E3F200D9F64C /* ExpenSeeWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -237,6 +382,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F5DAFD193030BA3400957CDF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F5ED448D3031E3F200D9F64C /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -267,6 +419,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F5ED448B3031E3F200D9F64C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -279,6 +438,11 @@
 			isa = PBXTargetDependency;
 			target = F5DAFD013030BA3200957CDF /* ExpenSee */;
 			targetProxy = F5DAFD1C3030BA3400957CDF /* PBXContainerItemProxy */;
+		};
+		F5ED44A13031E3F300D9F64C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F5ED448E3031E3F200D9F64C /* ExpenSeeWidgetExtension */;
+			targetProxy = F5ED44A03031E3F300D9F64C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -404,6 +568,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ExpenSee/ExpenSee.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Z96LML8BZ2;
@@ -412,6 +577,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -448,6 +614,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ExpenSee/ExpenSee.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = Z96LML8BZ2;
@@ -456,6 +623,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -589,6 +757,73 @@
 			};
 			name = Release;
 		};
+		F5ED44A43031E3F300D9F64C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = ExpenSeeWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Z96LML8BZ2;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ExpenSeeWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ExpenSeeWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "harvy-angelo-tan.ExpenSee.ExpenSeeWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F5ED44A53031E3F300D9F64C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = ExpenSeeWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Z96LML8BZ2;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ExpenSeeWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ExpenSeeWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "harvy-angelo-tan.ExpenSee.ExpenSeeWidget";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -628,7 +863,36 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		F5ED44A33031E3F300D9F64C /* Build configuration list for PBXNativeTarget "ExpenSeeWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F5ED44A43031E3F300D9F64C /* Debug */,
+				F5ED44A53031E3F300D9F64C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		F52103FD30318B6600C460CD /* XCLocalSwiftPackageReference "ExpenSeeCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ExpenSeeCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F52103FE30318E7600C460CD /* ExpenSeeCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F52103FD30318B6600C460CD /* XCLocalSwiftPackageReference "ExpenSeeCore" */;
+			productName = ExpenSeeCore;
+		};
+		F5ED44BC3031E41B00D9F64C /* ExpenSeeCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F52103FD30318B6600C460CD /* XCLocalSwiftPackageReference "ExpenSeeCore" */;
+			productName = ExpenSeeCore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = F5DAFCFA3030BA3200957CDF /* Project object */;
 }
