@@ -5,79 +5,142 @@
 //  Created by Harvy Angelo Tan on 8/15/26.
 //
 
-
 import ActivityKit
 import WidgetKit
 import SwiftUI
 
 #if os(iOS) && canImport(ActivityKit)
 struct SpendingLiveActivity: Widget {
+    // Shared App Group storage for widget extension runtime
+    @AppStorage("userCurrencyCode", store: UserDefaults(suiteName: "group.com.harvy-angelo-tan.ExpenSee"))
+    private var currencyCode: String = "USD"
+    
     var body: some WidgetConfiguration {
-        ActivityConfiguration(for: SpendingActivityAttributes.self) { context in
-            // Lock Screen / Notification Center Banner
-            SpendingLiveActivityLockScreenView(context: context)
+        ActivityConfiguration(for: ExpenSeeActivityAttributes.self) { context in
+            ExpenSeeLiveActivityLockScreenView(context: context)
                 .activityBackgroundTint(Color.black.opacity(0.85))
                 .activitySystemActionForegroundColor(Color.white)
 
         } dynamicIsland: { context in
             DynamicIsland {
-                // Expanded Region UI
+                // MARK: - Expanded Region UI
                 DynamicIslandExpandedRegion(.leading) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Spent Today")
+                        Text("Remaining")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
-                        Text(context.state.spentToday, format: .currency(code: Locale.current.currency?.identifier ?? "USD"))
+                            .lineLimit(1)
+                        Text(context.state.remainingBudget, format: .currency(code: currencyCode))
                             .font(.subheadline)
-                            .fontWeight(.semibold)
+                            .fontWeight(.bold)
+                            .foregroundStyle(context.state.remainingBudget < 0 ? .red : .green)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
                     }
+                    .padding(.leading, 8)
                 }
                 
                 DynamicIslandExpandedRegion(.trailing) {
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text("Remaining")
+                        Text("Spent")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
-                        Text(context.state.remainingBudget, format: .currency(code: Locale.current.currency?.identifier ?? "USD"))
+                            .lineLimit(1)
+                        Text(context.state.spentToday, format: .currency(code: currencyCode))
                             .font(.subheadline)
-                            .fontWeight(.bold)
-                            .foregroundStyle(context.state.remainingBudget < 0 ? .red : .primary)
+                            .fontWeight(.semibold)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
                     }
+                    .padding(.trailing, 8)
+                }
+
+                DynamicIslandExpandedRegion(.center) {
+                    Text(context.attributes.budgetCycleName)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
                 
                 DynamicIslandExpandedRegion(.bottom) {
-                    VStack(spacing: 6) {
+                    VStack(spacing: 8) {
                         ProgressView(value: max(0, min(1, context.state.progressValue)))
                             .tint(context.state.remainingBudget < 0 ? .red : .green)
                         
                         if let lastAmount = context.state.lastExpenseAmount,
                            let category = context.state.lastExpenseCategory {
-                            HStack {
-                                Text("Last: \(category)")
+                            HStack(spacing: 2) {
+                                HStack(spacing: 2) {
+                                    Image(systemName: "clock.arrow.circlepath")
+                                    Text("\(category): ")
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
+                                }
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                
+                                Text("-\(lastAmount, format: .currency(code: currencyCode))")
+                                    .font(.caption2.weight(.bold))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                                
+                                Spacer(minLength: 8)
+                                
+                                Text("Limit: ")
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
-                                Spacer()
-                                Text("-\(lastAmount, format: .currency(code: Locale.current.currency?.identifier ?? "USD"))")
-                                    .font(.caption2)
-                                    .fontWeight(.medium)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                Text(context.state.baseDailyLimit, format: .currency(code: currencyCode))
+                                    .font(.caption2.weight(.bold))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
                             }
                         }
                     }
+                    .padding(.horizontal, 8)
+                    .padding(.top, 4)
                 }
             } compactLeading: {
-                Image(systemName: "dollarsign.circle.fill")
+                Image(systemName: context.state.remainingBudget < 0 ? "exclamationmark.triangle.fill" : "dollarsign.circle.fill")
                     .foregroundStyle(context.state.remainingBudget < 0 ? .red : .green)
             } compactTrailing: {
-                Text(context.state.remainingBudget, format: .number.precision(.fractionLength(0)))
+                Text(context.state.remainingBudget, format: .currency(code: currencyCode))
                     .font(.caption2)
                     .fontWeight(.bold)
                     .foregroundStyle(context.state.remainingBudget < 0 ? .red : .primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+                    .frame(maxWidth: 54, alignment: .trailing)
             } minimal: {
-                Image(systemName: "dollarsign.circle.fill")
+                Image(systemName: context.state.remainingBudget < 0 ? "exclamationmark.triangle.fill" : "dollarsign.circle.fill")
                     .foregroundStyle(context.state.remainingBudget < 0 ? .red : .green)
             }
             .keylineTint(context.state.remainingBudget < 0 ? Color.red : Color.green)
         }
     }
+}
+
+// MARK: - Previews
+#Preview("Live Activity", as: .dynamicIsland(.expanded), using: ExpenSeeActivityAttributes(budgetCycleName: "Daily Budget")) {
+    SpendingLiveActivity()
+} contentStates: {
+    ExpenSeeActivityAttributes.ContentState(
+        remainingBudget: 350.00,
+        spentToday: 150.00,
+        baseDailyLimit: 500.00,
+        lastExpenseAmount: 45.00,
+        lastExpenseCategory: "Groceries"
+    )
+    
+    ExpenSeeActivityAttributes.ContentState(
+        remainingBudget: -25.50,
+        spentToday: 525.50,
+        baseDailyLimit: 500.00,
+        lastExpenseAmount: 12.50,
+        lastExpenseCategory: "Coffee"
+    )
 }
 #endif

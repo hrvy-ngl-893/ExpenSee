@@ -8,6 +8,7 @@
 import Foundation
 import Combine
 import ExpenSeeCore
+import WidgetKit
 
 #if os(iOS) && canImport(ActivityKit)
 import ActivityKit
@@ -16,55 +17,25 @@ import ActivityKit
 public final class LiveActivityManager: ObservableObject {
     public static let shared = LiveActivityManager()
     
-    @Published public private(set) var currentActivity: Activity<SpendingActivityAttributes>?
+    @Published public private(set) var currentActivity: Activity<ExpenSeeActivityAttributes>?
     
     private init() {
-        // Restore active activity reference if one is already running
-        currentActivity = Activity<SpendingActivityAttributes>.activities.first
+        // Restore reference if an activity is already running on app launch
+        currentActivity = Activity<ExpenSeeActivityAttributes>.activities.first(where: { $0.activityState == .active })
     }
     
-    /// Starts a new Live Activity for spending track
-    public func startActivity(
+    /// Starts or updates a Live Activity for the selected budget and reloads widget timelines.
+    public func updateOrStartActivity(
         remainingBudget: Decimal,
         spentToday: Decimal,
         baseDailyLimit: Decimal,
-        budgetCycleName: String = "Daily Budget"
-    ) {
-        // Prevent starting duplicate activities if disabled
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-        
-        let attributes = SpendingActivityAttributes(budgetCycleName: budgetCycleName)
-        let initialState = SpendingActivityAttributes.ContentState(
-            remainingBudget: remainingBudget,
-            spentToday: spentToday,
-            baseDailyLimit: baseDailyLimit,
-            lastExpenseAmount: nil,
-            lastExpenseCategory: nil
-        )
-        
-        do {
-            let activity = try Activity.request(
-                attributes: attributes,
-                content: .init(state: initialState, staleDate: nil),
-                pushType: nil
-            )
-            self.currentActivity = activity
-        } catch {
-            print("Failed to start Live Activity: \(error.localizedDescription)")
-        }
-    }
-    
-    /// Updates the active Live Activity content state
-    public func updateActivity(
-        remainingBudget: Decimal,
-        spentToday: Decimal,
-        baseDailyLimit: Decimal,
+        budgetCycleName: String,
         lastExpenseAmount: Decimal? = nil,
         lastExpenseCategory: String? = nil
     ) {
-        guard let activity = currentActivity else { return }
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         
-        let updatedState = SpendingActivityAttributes.ContentState(
+        let state = ExpenSeeActivityAttributes.ContentState(
             remainingBudget: remainingBudget,
             spentToday: spentToday,
             baseDailyLimit: baseDailyLimit,
@@ -72,17 +43,41 @@ public final class LiveActivityManager: ObservableObject {
             lastExpenseCategory: lastExpenseCategory
         )
         
-        Task {
-            await activity.update(
-                ActivityContent<SpendingActivityAttributes.ContentState>(
-                    state: updatedState,
-                    staleDate: nil
-                )
+        // If an activity is already active with a matching budget cycle name, update it.
+        if let activity = currentActivity, activity.activityState == .active {
+            if activity.attributes.budgetCycleName == budgetCycleName {
+                Task {
+                    await activity.update(
+                        ActivityContent<ExpenSeeActivityAttributes.ContentState>(
+                            state: state,
+                            staleDate: nil
+                        )
+                    )
+                    WidgetCenter.shared.reloadAllTimelines()
+                }
+                return
+            } else {
+                // If the selected budget changed, end the current activity first to apply new attributes.
+                endActivitySync()
+            }
+        }
+        
+        // Request a new activity if none is active or if the budget title changed
+        let attributes = ExpenSeeActivityAttributes(budgetCycleName: budgetCycleName)
+        do {
+            let newActivity = try Activity.request(
+                attributes: attributes,
+                content: .init(state: state, staleDate: nil),
+                pushType: nil
             )
+            self.currentActivity = newActivity
+            WidgetCenter.shared.reloadAllTimelines()
+        } catch {
+            print("❌ Failed to start Live Activity: \(error.localizedDescription)")
         }
     }
     
-    /// Ends the current active Live Activity
+    /// Ends the active Live Activity immediately.
     public func endActivity() {
         guard let activity = currentActivity else { return }
         
@@ -91,14 +86,24 @@ public final class LiveActivityManager: ObservableObject {
                 state: activity.content.state,
                 staleDate: nil
             )
-            
             await activity.end(finalContent, dismissalPolicy: .immediate)
             
             await MainActor.run {
                 self.currentActivity = nil
+                WidgetCenter.shared.reloadAllTimelines()
             }
         }
     }
-
+    
+    /// Synchronous internal helper to end stale activities before switching budgets.
+    private func endActivitySync() {
+        guard let activity = currentActivity else { return }
+        let finalContent = ActivityContent(state: activity.content.state, staleDate: nil)
+        
+        Task {
+            await activity.end(finalContent, dismissalPolicy: .immediate)
+        }
+        self.currentActivity = nil
+    }
 }
 #endif

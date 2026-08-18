@@ -1,5 +1,5 @@
 //
-//  QuickLogProvider.swift
+//  QuickLogWidget.swift
 //  ExpenSee
 //
 //  Created by Harvy Angelo Tan on 8/16/26.
@@ -59,7 +59,6 @@ struct QuickLogWidgetView: View {
                 }
             }
         default:
-            // Home Screen Small Widget
             Link(destination: URL(string: "expen-see://add-expense")!) {
                 VStack(spacing: 12) {
                     ZStack {

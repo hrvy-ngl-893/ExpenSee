@@ -12,7 +12,7 @@ import AppIntents
 
 struct ConfigurationAppIntent: WidgetConfigurationIntent {
     static var title: LocalizedStringResource = "Configure Daily Budget"
-    static var description: IntentDescription = "Choose how your remaining daily budget is displayed on your home screen."
+    static var description: IntentDescription = "Choose how your daily budget is displayed on your home screen."
 
     @Parameter(title: "Display Mode", default: .remaining)
     var displayMode: BudgetDisplayMode

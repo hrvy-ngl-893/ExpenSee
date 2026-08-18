@@ -12,13 +12,20 @@ import ExpenSeeCore
 struct EntryView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
-    
+
+    @Query private var availableSources: [MoneySource]
+
     @State private var amountText: String = ""
     @State private var note: String = ""
     @State private var selectedCategory: SpendingCategory? = nil
     @State private var selectedSource: MoneySource? = nil
     @State private var showNewCategorySheet = false
-    
+
+    var isValidToSave: Bool {
+        let isAmountValid = !amountText.trimmingCharacters(in: .whitespaces).isEmpty
+        return isAmountValid && selectedSource != nil
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -28,14 +35,14 @@ struct EntryView: View {
                         onAddNewCategory: { showNewCategorySheet = true }
                     )
                     SourcePickerView(
-                        selectedSource: $selectedSource                        
+                        selectedSource: $selectedSource
                     )
-                    
+
                     TextField("Amount ($)", text: $amountText)
                         #if os(iOS)
                         .keyboardType(.decimalPad)
                         #endif
-                    
+
                     TextField("Note (Optional)", text: $note)
                 }
             }
@@ -47,10 +54,15 @@ struct EntryView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
-                
+
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { saveExpense() }
-                        .disabled(amountText.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(!isValidToSave)
+                }
+            }
+            .onAppear {
+                if selectedSource == nil {
+                    selectedSource = availableSources.first
                 }
             }
             .sheet(isPresented: $showNewCategorySheet) {
@@ -62,17 +74,18 @@ struct EntryView: View {
             }
         }
     }
-    
+
     private func saveExpense() {
         let filtered = amountText.replacingOccurrences(of: ",", with: ".")
         let cleanedText = filtered.components(separatedBy: CharacterSet(charactersIn: "0123456789.").inverted).joined()
-        
-        guard let amount = Decimal(string: cleanedText), amount > 0 else { return }
-        
+
+        guard let amount = Decimal(string: cleanedText), amount > 0,
+              let source = selectedSource else { return }
+
         let repository = SpendingRepository(context: context)
-        
+
         do {
-            try repository.logSpending(amount: amount, category: selectedCategory, source: nil, note: note)
+            try repository.logSpending(amount: amount, category: selectedCategory, source: source, note: note)
             dismiss()
         } catch {
             print("Failed to save expense: \(error)")
@@ -82,4 +95,5 @@ struct EntryView: View {
 
 #Preview {
     ContentView(showAddExpenseSheet: .constant(false))
+        .environmentObject(SettingsViewModel())
 }

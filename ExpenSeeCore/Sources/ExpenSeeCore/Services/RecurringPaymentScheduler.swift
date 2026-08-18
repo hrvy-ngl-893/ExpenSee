@@ -19,13 +19,19 @@ public struct RecurringPaymentScheduler {
         let duePayments = payments.filter { $0.nextDueDate <= now }
         
         for payment in duePayments {
+            // Ensure payment has a valid MoneySource before logging spending
+            guard let source = payment.source else {
+                print("⚠️ Skipping recurring payment '\(payment.name)': Missing MoneySource.")
+                continue
+            }
+            
             // 1. Create a SpendingRecord for the payment
             let record = SpendingRecord(
                 amount: payment.amount,
                 timestamp: payment.nextDueDate,
                 note: "Auto-generated: \(payment.name)",
                 category: payment.category,
-                source: payment.source
+                source: source
             )
             context.insert(record)
             

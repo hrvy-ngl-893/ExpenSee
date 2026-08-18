@@ -17,12 +17,24 @@ public final class MoneySource {
     public var hexColor: String?
     public var iconString: String?
     
-    public init(id: UUID = UUID(), name: String, createdAt: Date = .init(), balance: Decimal, hexColor: String?, iconString: String?) {
+    @Relationship(deleteRule: .cascade, inverse: \SpendingRecord.source)
+    public var spendingRecords: [SpendingRecord]
+    
+    public init(
+        id: UUID = UUID(),
+        name: String,
+        createdAt: Date = .init(),
+        balance: Decimal,
+        hexColor: String?,
+        iconString: String?,
+        spendingRecords: [SpendingRecord] = []
+    ) {
         self.id = id
         self.name = name
         self.createdAt = createdAt
         self.balance = balance
         self.hexColor = hexColor
         self.iconString = iconString
+        self.spendingRecords = spendingRecords
     }
 }

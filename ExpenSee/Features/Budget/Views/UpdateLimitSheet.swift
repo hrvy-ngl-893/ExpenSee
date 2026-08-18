@@ -14,12 +14,17 @@ struct UpdateLimitSheet: View {
     @Environment(\.dismiss) private var dismiss
     
     @Bindable var viewModel: BudgetViewModel
+    let existingBudget: Budget?
+    
+    @State private var selectedPeriod: BudgetPeriod
     @State private var limitText: String
     
-    init(viewModel: BudgetViewModel, currentLimit: Decimal?) {
+    init(viewModel: BudgetViewModel, existingBudget: Budget? = nil) {
         self.viewModel = viewModel
-
-        if let limit = currentLimit {
+        self.existingBudget = existingBudget
+        
+        _selectedPeriod = State(initialValue: existingBudget?.period ?? .daily)
+        if let limit = existingBudget?.limitAmount {
             _limitText = State(initialValue: "\(limit)")
         } else {
             _limitText = State(initialValue: "")
@@ -29,14 +34,23 @@ struct UpdateLimitSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("New Allowance") {
-                    TextField("Base Daily Limit ($)", text: $limitText)
+                Section("Cadence") {
+                    Picker("Period", selection: $selectedPeriod) {
+                        Text("Daily").tag(BudgetPeriod.daily)
+                        Text("Weekly").tag(BudgetPeriod.weekly)
+                        Text("Monthly").tag(BudgetPeriod.monthly)
+                    }
+                    .pickerStyle(.segmented)
+                }
+                
+                Section("Allowance") {
+                    TextField("Limit Amount ($)", text: $limitText)
                         #if os(iOS)
                         .keyboardType(.decimalPad)
                         #endif
                 }
             }
-            .navigationTitle("Set Daily Budget")
+            .navigationTitle(existingBudget == nil ? "Set Budget" : "Configure Budget")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -58,7 +72,12 @@ struct UpdateLimitSheet: View {
         
         guard let newLimit = Decimal(string: cleanedText), newLimit > 0 else { return }
         
-        viewModel.updateDailyLimit(context: context, newLimit: newLimit)
+        viewModel.saveStandardBudget(
+            context: context,
+            period: selectedPeriod,
+            limitAmount: newLimit,
+            existingBudget: existingBudget
+        )
         dismiss()
     }
 }

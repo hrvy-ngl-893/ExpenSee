@@ -29,7 +29,7 @@ public struct AnalyticsAggregator {
         var totals: [String: Decimal] = [:]
         
         for record in records {
-            let sourceName = record.source?.name ?? "Unknown Source"
+            let sourceName = record.source.name ?? "Unknown Source"
             totals[sourceName, default: 0] += record.amount
         }
         return totals

@@ -14,40 +14,105 @@ import ExpenSeeCore
 @MainActor
 final class BudgetViewModel {
 
-    // Updates the current daily budget limit by ending any active rules and inserting a new one.
-    func updateDailyLimit(context: ModelContext, newLimit: Decimal) {
+    /// Creates or updates a standard period budget (Daily, Weekly, Monthly)
+    func saveStandardBudget(
+        context: ModelContext,
+        period: BudgetPeriod,
+        limitAmount: Decimal,
+        existingBudget: Budget? = nil
+    ) {
         do {
-            // 1. Fetch any currently active rules and deactivate them
-            let descriptor = FetchDescriptor<DailyBudgetRule>(
-                predicate: #Predicate<DailyBudgetRule> { $0.isCurrent == true }
-            )
-            let activeRules = try context.fetch(descriptor)
+            if let existingBudget {
+                existingBudget.limitAmount = limitAmount
+                existingBudget.isActive = true
+            } else {
+                // Deactivate prior standard budgets for the same period
+                let rawPeriod = period.rawValue
+                let descriptor = FetchDescriptor<Budget>(
+                    predicate: #Predicate<Budget> { $0.isActive && $0.periodRawValue == rawPeriod }
+                )
+                let activeBudgets = try context.fetch(descriptor)
+                for budget in activeBudgets {
+                    budget.isActive = false
+                }
 
-            for rule in activeRules {
-                rule.isCurrent = false
+                let newBudget = Budget(
+                    name: "\(period.rawValue.capitalized) Budget",
+                    limitAmount: limitAmount,
+                    period: period,
+                    startDate: Date(),
+                    isActive: true
+                )
+                context.insert(newBudget)
             }
-
-            // 2. Create the new current rule starting right now
-            let newRule = DailyBudgetRule(
-                baseDailyLimit: newLimit,
-                effectiveFrom: Date(),
-                isCurrent: true
-            )
-
-            context.insert(newRule)
             try context.save()
-
         } catch {
-            print("Failed to update daily budget limit: \(error.localizedDescription)")
+            print("Failed to save standard budget: \(error.localizedDescription)")
         }
-    }   
-    // Optional: Allow deleting historical rules to clean up the list
-    func deleteRule(context: ModelContext, rule: DailyBudgetRule) {
-        context.delete(rule)
+    }
+
+    /// Creates a custom or category-assignable budget
+    func createAssignableBudget(
+        context: ModelContext,
+        name: String,
+        limitAmount: Decimal,
+        startDate: Date,
+        endDate: Date?,
+        repeatFrequency: PaymentFrequency?,
+        category: SpendingCategory?
+    ) {
+        let assignableBudget = Budget(
+            name: name.isEmpty ? "Custom Budget" : name,
+            limitAmount: limitAmount,
+            period: .assignable,
+            startDate: startDate,
+            endDate: endDate,
+            repeatFrequency: repeatFrequency,
+            isActive: true,
+            category: category
+        )
+        
+        context.insert(assignableBudget)
+        
         do {
             try context.save()
         } catch {
-            print("Failed to delete budget rule: \(error.localizedDescription)")
+            print("Failed to create assignable budget: \(error.localizedDescription)")
+        }
+    }
+
+    /// Updates an existing custom or category-assignable budget
+    func updateAssignableBudget(
+        context: ModelContext,
+        budget: Budget,
+        name: String,
+        limitAmount: Decimal,
+        startDate: Date,
+        endDate: Date?,
+        repeatFrequency: PaymentFrequency?,
+        category: SpendingCategory?
+    ) {
+        budget.name = name.isEmpty ? "Custom Budget" : name
+        budget.limitAmount = limitAmount
+        budget.startDate = startDate
+        budget.endDate = endDate
+        budget.repeatFrequency = repeatFrequency
+        budget.category = category
+        
+        do {
+            try context.save()
+        } catch {
+            print("Failed to update assignable budget: \(error.localizedDescription)")
+        }
+    }
+
+    /// Deletes or deactivates a budget entry
+    func deleteBudget(context: ModelContext, budget: Budget) {
+        context.delete(budget)
+        do {
+            try context.save()
+        } catch {
+            print("Failed to delete budget: \(error.localizedDescription)")
         }
     }
 }

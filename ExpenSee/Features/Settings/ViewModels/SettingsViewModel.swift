@@ -6,6 +6,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import WidgetKit
 
 public enum AppTheme: String, CaseIterable, Identifiable {
     case system = "System"
@@ -23,18 +24,33 @@ public enum AppTheme: String, CaseIterable, Identifiable {
     }
 }
 
+private let sharedUserDefaults = UserDefaults(suiteName: "group.com.harvy-angelo-tan.ExpenSee")
+
 @MainActor
 public final class SettingsViewModel: ObservableObject {
-    @AppStorage("userCurrencyCode") public var currencyCode: String = Locale.current.currency?.identifier ?? "USD" {
+    @AppStorage("userCurrencyCode", store: sharedUserDefaults)
+    public var currencyCode: String = Locale.current.currency?.identifier ?? "USD" {
+        willSet {
+            objectWillChange.send()
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+    }
+    
+    @AppStorage("notificationsEnabled", store: sharedUserDefaults)
+    public var notificationsEnabled: Bool = true {
         willSet { objectWillChange.send() }
     }
-    @AppStorage("notificationsEnabled") public var notificationsEnabled: Bool = true {
-        willSet { objectWillChange.send() }
+    
+    @AppStorage("appThemeRaw", store: sharedUserDefaults)
+    public var appThemeRaw: String = AppTheme.system.rawValue {
+        willSet {
+            objectWillChange.send()
+            WidgetCenter.shared.reloadAllTimelines()
+        }
     }
-    @AppStorage("appThemeRaw") public var appThemeRaw: String = AppTheme.system.rawValue {
-        willSet { objectWillChange.send() }
-    }
-    @AppStorage("liveActivityEnabled") public var liveActivityEnabled: Bool = true {
+    
+    @AppStorage("liveActivityEnabled", store: sharedUserDefaults)
+    public var liveActivityEnabled: Bool = true {
         willSet { objectWillChange.send() }
     }
     

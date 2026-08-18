@@ -22,7 +22,7 @@ public class SpendingRepository {
         self.budgetEngine = BudgetEngine()
     }
     
-    /// Creates and persists a new SpendingCategory.
+    // Creates and persists a new SpendingCategory.
     @discardableResult
     public func createCategory(name: String, hexColor: String = "#007AFF", iconString: String = "cart") throws -> SpendingCategory {
         let category = SpendingCategory(
@@ -35,7 +35,7 @@ public class SpendingRepository {
         return category
     }
     
-    public func logSpending(amount: Decimal, category: SpendingCategory?, source: MoneySource?, note: String = "") throws {
+    public func logSpending(amount: Decimal, category: SpendingCategory?, source: MoneySource, note: String = "") throws {
         let record = SpendingRecord(
             amount: amount,
             note: note,
@@ -44,7 +44,10 @@ public class SpendingRepository {
         )
         
         context.insert(record)
-        try context.save()
+        
+        if context.hasChanges {
+            try context.save()
+        }
         
         Task {
             await refreshExtensions()

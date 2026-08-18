@@ -51,6 +51,7 @@ struct ContentView: View {
 
 #Preview {
     ContentView(showAddExpenseSheet: .constant(false))
-        .modelContainer(ModelContainerFactory.shared)
+        .modelContainer(ModelContainerFactory.inMemoryPreview)
+        .environmentObject(LiveActivityManager.shared)
         .environmentObject(SettingsViewModel())
 }

@@ -25,6 +25,31 @@ struct DailyBudgetWidgetView: View {
         }
     }
 
+    // MARK: - Display Helpers Based on Configuration
+    private var headerTitle: String {
+        switch entry.configuration.displayMode {
+        case .remaining: return "Daily Left"
+        case .spent: return "Spent Today"
+        case .percentage: return "Used"
+        }
+    }
+
+    private var primaryDisplayValue: String {
+        let currencyCode = Locale.current.currency?.identifier ?? "USD"
+        switch entry.configuration.displayMode {
+        case .remaining:
+            return entry.remainingBudget.formatted(.currency(code: currencyCode))
+        case .spent:
+            return entry.spentToday.formatted(.currency(code: currencyCode))
+        case .percentage:
+            let limit = NSDecimalNumber(decimal: entry.baseDailyLimit).doubleValue
+            guard limit > 0 else { return "0%" }
+            let spent = NSDecimalNumber(decimal: entry.spentToday).doubleValue
+            let pct = (spent / limit) * 100
+            return String(format: "%.0f%%", pct)
+        }
+    }
+
     // MARK: - Standard Widget Views
     private var smallWidgetView: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -32,7 +57,7 @@ struct DailyBudgetWidgetView: View {
                 Image(systemName: "creditcard.fill")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("Daily Left")
+                Text(headerTitle)
                     .font(.caption)
                     .fontWeight(.medium)
                     .foregroundStyle(.secondary)
@@ -40,7 +65,7 @@ struct DailyBudgetWidgetView: View {
 
             Spacer()
 
-            Text(entry.remainingBudget, format: .currency(code: Locale.current.currency?.identifier ?? "USD"))
+            Text(primaryDisplayValue)
                 .font(.system(.title, design: .rounded, weight: .bold))
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)
@@ -63,32 +88,34 @@ struct DailyBudgetWidgetView: View {
         HStack(spacing: 16) {
             smallWidgetView
 
-            Divider()
+            if entry.configuration.showCategoryBreakdown {
+                Divider()
 
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("Spent Today")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Spent Today")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text(entry.spentToday, format: .currency(code: Locale.current.currency?.identifier ?? "USD"))
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                    }
+
+                    HStack {
+                        Text("Daily Base")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text(entry.baseDailyLimit, format: .currency(code: Locale.current.currency?.identifier ?? "USD"))
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                    }
+
                     Spacer()
-                    Text(entry.spentToday, format: .currency(code: Locale.current.currency?.identifier ?? "USD"))
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
                 }
-
-                HStack {
-                    Text("Daily Base")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Text(entry.baseDailyLimit, format: .currency(code: Locale.current.currency?.identifier ?? "USD"))
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                }
-
-                Spacer()
+                .padding(.vertical, 4)
             }
-            .padding(.vertical, 4)
         }
         .containerBackground(for: .widget) { Color.clear }
     }
@@ -98,10 +125,7 @@ struct DailyBudgetWidgetView: View {
     @ViewBuilder
     private var accessoryView: some View {
         if family == .accessoryCircular {
-            // 1. Determine overbudget status
             let isOverBudget = entry.remainingBudget < 0
-            
-            // 2. Clamp progress strictly between 0.0 and 1.0 for the filled ring
             let clampedProgress = max(0.0, min(1.0, progressValue))
 
             Gauge(value: clampedProgress, in: 0...1) {
@@ -109,7 +133,6 @@ struct DailyBudgetWidgetView: View {
             } currentValueLabel: {
                 Text(entry.remainingBudget, format: .number.precision(.fractionLength(0)))
             }
-            // 3. .accessoryCircularCapacity turns the dot into a filled ring segment
             .gaugeStyle(.accessoryCircularCapacity)
             .tint(isOverBudget ? Color.red : Color.primary)
             .containerBackground(for: .widget) { Color.clear }
@@ -133,3 +156,5 @@ struct DailyBudgetWidgetView: View {
         return max(0, min(1, remaining / limit))
     }
 }
+
+// MARK: - Widget Definition

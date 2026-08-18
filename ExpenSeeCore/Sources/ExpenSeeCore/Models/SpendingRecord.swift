@@ -16,14 +16,24 @@ public final class SpendingRecord {
     public var note: String
     
     @Relationship public var category: SpendingCategory?
-    @Relationship public var source: MoneySource?
+    @Relationship public var source: MoneySource
+    @Relationship public var budget: Budget? 
     
-    public init(id: UUID = UUID(), amount: Decimal, timestamp: Date = Date(), note: String = "", category: SpendingCategory? = nil, source: MoneySource? = nil) {
+    public init(
+        id: UUID = UUID(),
+        amount: Decimal,
+        timestamp: Date = Date(),
+        note: String = "",
+        category: SpendingCategory? = nil,
+        source: MoneySource,
+        budget: Budget? = nil
+    ) {
         self.id = id
         self.amount = amount
         self.timestamp = timestamp
         self.note = note
         self.category = category
         self.source = source
+        self.budget = budget
     }
 }

@@ -1,17 +1,16 @@
 //
-//  SpendingActivityAttributes.swift
+//  ExpenSeeActivityAttributes.swift
 //  ExpenSee
 //
 //  Created by Harvy Angelo Tan on 8/15/26.
 //
 
-
 import ActivityKit
 import Foundation
+
 #if os(iOS)
-public struct SpendingActivityAttributes: ActivityAttributes {
+public struct ExpenSeeActivityAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
-        // Dynamic state updated during the Live Activity lifecycle
         var remainingBudget: Decimal
         var spentToday: Decimal
         var baseDailyLimit: Decimal
@@ -24,7 +23,6 @@ public struct SpendingActivityAttributes: ActivityAttributes {
         }
     }
 
-    // Fixed non-changing properties
     var budgetCycleName: String
 }
 #endif
