@@ -16,72 +16,78 @@ struct DashboardView: View {
     @Environment(\.modelContext) private var context
     @EnvironmentObject private var settings: SettingsViewModel
 
-    @Query private var records: [SpendingRecord]
-    @Query(sort: \Budget.startDate, order: .reverse) private var allBudgets: [Budget]
+    @Query private var transactions: [ExpenSeeCore.Transaction]
+    @Query(sort: \SpendingLimit.startDate, order: .reverse) private var allSpendingLimits: [SpendingLimit]
 
     @State private var showingEntrySheet = false
     @State private var isLiveActivityEnabled = false
-    
-    // Store selected budget ID in UserDefaults/AppStorage so Widget Extensions can share access
+
     @AppStorage("selectedLiveActivityBudgetID", store: UserDefaults(suiteName: "group.com.harvy-angelo-tan.ExpenSee"))
-    private var selectedBudgetIDString: String = ""
+    private var selectedSpendingLimitIDString: String = ""
 
-    private var activeBudgets: [Budget] {
-        allBudgets.filter { $0.isActive }
+    private var activeSpendingLimits: [SpendingLimit] {
+        allSpendingLimits.filter { $0.isActive }
     }
-
-    // MARK: - Featured Budget Property
-    private var featuredBudget: Budget? {
-        if !selectedBudgetIDString.isEmpty,
-           let budget = activeBudgets.first(where: { String(describing: $0.persistentModelID) == selectedBudgetIDString }) {
+    
+    private var featuredSpendingLimit: SpendingLimit? {
+        if !selectedSpendingLimitIDString.isEmpty,
+           let budget = activeSpendingLimits.first(where: { String(describing: $0.persistentModelID) == selectedSpendingLimitIDString }) {
             return budget
         }
         
-        // Explicit unwrapping steps prevent Swift type-checker confusion
-        if let daily = activeBudgets.first(where: { $0.period == .daily }) { return daily }
-        if let weekly = activeBudgets.first(where: { $0.period == .weekly }) { return weekly }
-        if let monthly = activeBudgets.first(where: { $0.period == .monthly }) { return monthly }
+        // Priority fallbacks
+        if let daily = activeSpendingLimits.first(where: { $0.period == .daily }) {
+            return daily
+        }
+        if let weekly = activeSpendingLimits.first(where: { $0.period == .weekly }) {
+            return weekly
+        }
+        if let quincena = activeSpendingLimits.first(where: { $0.period == .quincena }) {
+            return quincena
+        }
+        if let monthly = activeSpendingLimits.first(where: { $0.period == .monthly }) {
+            return monthly
+        }
+        if let yearly = activeSpendingLimits.first(where: { $0.period == .yearly }) {
+            return yearly
+        }
         
-        return activeBudgets.first
+        return activeSpendingLimits.first
     }
-    
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    // MARK: - Budget Selector
-                    if activeBudgets.count > 1 {
-                        budgetPickerSection
+                    if activeSpendingLimits.count > 1 {
+                        spendingLimitPickerSection
                     }
 
-                    // MARK: - Hero Visual Card
-                    if let featured = featuredBudget {
-                        heroBudgetCard(for: featured)
+                    if let featured = featuredSpendingLimit {
+                        heroSpendingLimitCard(for: featured)
                     } else {
                         emptyBudgetHero
                     }
 
-                    // MARK: - Active Budgets Breakdown Grid
-                    if !activeBudgets.isEmpty {
+                    if !activeSpendingLimits.isEmpty {
                         budgetMetricsSection
                     }
 
-                    // MARK: - Primary Action Button
-                    Button(action: { showingEntrySheet = true }) {
-                        Label("Add Expense", systemImage: "plus.circle.fill")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 4)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
+                    addExpenseButton
 
-                    // MARK: - Budget Management Navigation
                     budgetNavigationTile
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Recent Expenses")
+                            .font(.headline)
+                            .padding(.leading, 4)
+
+                        TransactionsListView()
+                    }
                 }
                 .padding()
             }
-            .background(Color(uiColor: .systemGroupedBackground))
+            .background(.secondary.opacity(0.1))
             .navigationTitle("Dashboard")
             .toolbar {
                 #if os(iOS) && canImport(ActivityKit)
@@ -104,11 +110,10 @@ struct DashboardView: View {
                 checkLiveActivityStatus()
                 updateLiveActivity()
             }
-            .onChange(of: records) { _, _ in
+            .onChange(of: transactions) { _, _ in
                 updateLiveActivity()
             }
-            // Update Activity when user picks a different budget
-            .onChange(of: selectedBudgetIDString) { _, _ in
+            .onChange(of: selectedSpendingLimitIDString) { _, _ in
                 restartLiveActivityForNewSelection()
             }
         }
@@ -116,40 +121,39 @@ struct DashboardView: View {
 
     // MARK: - Components
 
-    private var budgetPickerSection: some View {
+    private var spendingLimitPickerSection: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(activeBudgets) { budget in
-                    let isSelected = featuredBudget?.persistentModelID == budget.persistentModelID
+                ForEach(activeSpendingLimits, id: \.persistentModelID) { spendingLimit in
+                    let isSelected = featuredSpendingLimit?.persistentModelID == spendingLimit.persistentModelID
                     Button {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedBudgetIDString = String(describing: budget.persistentModelID)
+                            selectedSpendingLimitIDString = String(describing: spendingLimit.persistentModelID)
                         }
                     } label: {
                         HStack(spacing: 6) {
-                            if let category = budget.category {
+                            if let category = spendingLimit.category {
                                 Image(systemName: category.iconString)
                             }
-                            Text(budget.name)
+                            Text(spendingLimit.name)
                                 .font(.subheadline)
                                 .fontWeight(isSelected ? .semibold : .regular)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(isSelected ? Color.accentColor : Color(uiColor: .secondarySystemGroupedBackground))
+                        .background(isSelected ? Color.accentColor : Color.gray.opacity(0.15), in: Capsule())
                         .foregroundStyle(isSelected ? .white : .primary)
-                        .clipShape(Capsule())
                     }
                 }
             }
         }
     }
 
-    private func heroBudgetCard(for budget: Budget) -> some View {
-        let spent = spentForBudget(budget)
-        let limit = budget.limitAmount
+    private func heroSpendingLimitCard(for spendingLimit: SpendingLimit) -> some View {
+        let spent = spentForSpendingLimit(spendingLimit)
+        let limit = spendingLimit.limitAmount
         let remaining = limit - spent
-        
+
         let limitDouble = NSDecimalNumber(decimal: limit).doubleValue
         let remainingDouble = NSDecimalNumber(decimal: remaining).doubleValue
         let ratio = limitDouble > 0 ? min(max(remainingDouble / limitDouble, 0), 1) : 0
@@ -171,7 +175,7 @@ struct DashboardView: View {
                     .rotationEffect(.degrees(-90))
 
                 VStack(spacing: 4) {
-                    Text(budget.name)
+                    Text(spendingLimit.name)
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundStyle(.secondary)
@@ -194,7 +198,7 @@ struct DashboardView: View {
         }
         .padding(.vertical, 16)
         .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(uiColor: .secondarySystemGroupedBackground)))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
     }
 
     private var emptyBudgetHero: some View {
@@ -211,7 +215,7 @@ struct DashboardView: View {
         }
         .padding(32)
         .frame(maxWidth: .infinity)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(uiColor: .secondarySystemGroupedBackground)))
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
     }
 
     private var budgetMetricsSection: some View {
@@ -221,10 +225,10 @@ struct DashboardView: View {
                 .padding(.leading, 4)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                ForEach(activeBudgets, id: \.persistentModelID) { budget in
-                    BudgetMetricCard(
-                        budget: budget,
-                        spent: spentForBudget(budget),
+                ForEach(activeSpendingLimits, id: \.persistentModelID) { spendingLimit in
+                    SpendingLimitMetricCard(
+                        spendingLimit: spendingLimit,
+                        spent: spentForSpendingLimit(spendingLimit),
                         currencyCode: settings.currencyCode
                     )
                 }
@@ -232,59 +236,89 @@ struct DashboardView: View {
         }
     }
 
+    private var addExpenseButton: some View {
+        Button(action: { showingEntrySheet = true }) {
+            Label("Add Expense", systemImage: "plus.circle.fill")
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 4)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+    }
+
     private var budgetNavigationTile: some View {
-        NavigationLink(destination: BudgetView()) {
+        NavigationLink(destination: SpendingLimitView()) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Manage Budgets")
                         .font(.headline)
                         .foregroundStyle(.primary)
-
-                    Text("\(activeBudgets.count) Active Budget\(activeBudgets.count == 1 ? "" : "s")")
+                    
+                    Text("\(activeSpendingLimits.count) Active Budget\(activeSpendingLimits.count == 1 ? "" : "s")")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-
+                
                 Spacer()
-
+                
                 Image(systemName: "chevron.right")
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundStyle(.tertiary)
             }
             .padding()
-            .background(RoundedRectangle(cornerRadius: 12).fill(Color(uiColor: .secondarySystemGroupedBackground)))
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
         }
     }
 
     // MARK: - Calculations
 
-    private func spentForBudget(_ budget: Budget) -> Decimal {
+    private func spentForSpendingLimit(_ spendingLimit: SpendingLimit) -> Decimal {
         let calendar = Calendar.current
         let now = Date()
 
-        let filteredRecords = records.filter { record in
-            if let budgetCategory = budget.category {
-                guard record.category?.persistentModelID == budgetCategory.persistentModelID else {
+        let filteredTransactions = transactions.filter { transaction in
+            if let limitCategory = spendingLimit.category {
+                guard transaction.category?.persistentModelID == limitCategory.persistentModelID else {
                     return false
                 }
             }
 
-            switch budget.period {
+            let date = transaction.timestamp
+
+            switch spendingLimit.period {
             case .daily:
-                return calendar.isDate(record.timestamp, inSameDayAs: now)
+                return calendar.isDate(date, inSameDayAs: now)
+
             case .weekly:
-                return calendar.isDate(record.timestamp, equalTo: now, toGranularity: .weekOfYear)
+                return calendar.isDate(date, equalTo: now, toGranularity: .weekOfYear) &&
+                       calendar.isDate(date, equalTo: now, toGranularity: .yearForWeekOfYear)
+
+            case .quincena:
+                guard calendar.isDate(date, equalTo: now, toGranularity: .month) &&
+                      calendar.isDate(date, equalTo: now, toGranularity: .year) else {
+                    return false
+                }
+                let nowDay = calendar.component(.day, from: now)
+                let transactionDay = calendar.component(.day, from: date)
+                return (nowDay <= 15 && transactionDay <= 15) || (nowDay > 15 && transactionDay > 15)
+
             case .monthly:
-                return calendar.isDate(record.timestamp, equalTo: now, toGranularity: .month)
-            case .assignable:
-                let afterStart = record.timestamp >= budget.startDate
-                let beforeEnd = budget.endDate == nil || record.timestamp <= budget.endDate!
+                return calendar.isDate(date, equalTo: now, toGranularity: .month) &&
+                       calendar.isDate(date, equalTo: now, toGranularity: .year)
+
+            case .yearly:
+                return calendar.isDate(date, equalTo: now, toGranularity: .year)
+
+            case .custom:
+                let afterStart = date >= spendingLimit.startDate
+                let beforeEnd = spendingLimit.endDate == nil || date <= spendingLimit.endDate!
                 return afterStart && beforeEnd
             }
         }
 
-        return filteredRecords.reduce(0) { $0 + $1.amount }
+        return filteredTransactions.reduce(0) { $0 + $1.amount }
     }
 
     // MARK: - Live Activity Updates
@@ -315,20 +349,21 @@ struct DashboardView: View {
 
     private func updateLiveActivity() {
         #if os(iOS) && canImport(ActivityKit)
-        guard isLiveActivityEnabled, let featured = featuredBudget else { return }
+        guard isLiveActivityEnabled, let featured = featuredSpendingLimit else { return }
         
-        let spent = spentForBudget(featured)
+        let spent = spentForSpendingLimit(featured)
         let remaining = featured.limitAmount - spent
         
         let calendar = Calendar.current
-        let todayRecords = records.filter { calendar.isDateInToday($0.timestamp) }
+        let todayRecords = transactions.filter { calendar.isDateInToday($0.timestamp) }
         let lastRecord = todayRecords.sorted(by: { $0.timestamp > $1.timestamp }).first
 
         LiveActivityManager.shared.updateOrStartActivity(
             remainingBudget: remaining,
             spentToday: spent,
             baseDailyLimit: featured.limitAmount,
-            budgetCycleName: featured.name, // <--- Dynamic Budget Title
+            budgetCycleName: featured.name,
+            currencyCode: settings.currencyCode,
             lastExpenseAmount: lastRecord?.amount,
             lastExpenseCategory: lastRecord?.category?.name
         )
@@ -336,53 +371,6 @@ struct DashboardView: View {
     }
 }
 
-struct BudgetMetricCard: View {
-    let budget: Budget
-    let spent: Decimal
-    let currencyCode: String
-
-    private var remaining: Decimal {
-        budget.limitAmount - spent
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                if let category = budget.category {
-                    Image(systemName: category.iconString)
-                } else {
-                    Image(systemName: "calendar")
-                        .foregroundStyle(.blue)
-                }
-                Text(budget.name)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(spent, format: .currency(code: currencyCode))
-                    .font(.system(.title3, design: .rounded, weight: .bold))
-                    .minimumScaleFactor(0.8)
-                    .lineLimit(1)
-
-                HStack {
-                    Text("Limit: \(budget.limitAmount.formatted(.currency(code: currencyCode)))")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                    Spacer()
-                    Text(remaining >= 0 ? "Rem: \(remaining.formatted(.currency(code: currencyCode)))" : "Over!")
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(remaining >= 0 ? .secondary : Color.red)
-                }
-            }
-        }
-        .padding()
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color(uiColor: .secondarySystemGroupedBackground)))
-    }
-}
 #Preview {
     DashboardView()
         .modelContainer(ModelContainerFactory.shared)

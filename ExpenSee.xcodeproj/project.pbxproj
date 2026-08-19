@@ -98,22 +98,9 @@
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
-/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		F5DAFDDA3030C37D00957CDF /* Exceptions for "ExpenSee" folder in "Compile Sources" phase from "ExpenSee" target */ = {
-			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
-			buildPhase = F5DAFCFE3030BA3200957CDF /* Sources */;
-			membershipExceptions = (
-				ExpenSee.entitlements,
-			);
-		};
-/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		F5DAFD043030BA3200957CDF /* ExpenSee */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				F5DAFDDA3030C37D00957CDF /* Exceptions for "ExpenSee" folder in "Compile Sources" phase from "ExpenSee" target */,
-			);
 			path = ExpenSee;
 			sourceTree = "<group>";
 		};

@@ -29,8 +29,8 @@ public struct AnalyticsAggregator {
         var totals: [String: Decimal] = [:]
         
         for record in records {
-            let sourceName = record.source.name ?? "Unknown Source"
-            totals[sourceName, default: 0] += record.amount
+            let accountName = record.account.name
+            totals[accountName, default: 0] += record.amount
         }
         return totals
     }
@@ -52,7 +52,7 @@ public struct AnalyticsAggregator {
     }
     
     // 4. Biggest individual expenses (Top N list)
-    public func biggestExpenses(context: ModelContext, from startDate: Date, to endDate: Date, limit: Int = 5) throws -> [SpendingRecord] {
+    public func biggestExpenses(context: ModelContext, from startDate: Date, to endDate: Date, limit: Int = 5) throws -> [Transaction] {
         let records = try fetchRecords(context: context, from: startDate, to: endDate)
         return Array(records.sorted(by: { $0.amount > $1.amount }).prefix(limit))
     }
@@ -77,8 +77,8 @@ public struct AnalyticsAggregator {
     }
     
     // Helper to safely fetch and filter dates in memory to avoid SwiftData predicate quirks
-    private func fetchRecords(context: ModelContext, from startDate: Date, to endDate: Date) throws -> [SpendingRecord] {
-        let descriptor = FetchDescriptor<SpendingRecord>()
+    private func fetchRecords(context: ModelContext, from startDate: Date, to endDate: Date) throws -> [Transaction] {
+        let descriptor = FetchDescriptor<Transaction>()
         let allRecords = try context.fetch(descriptor)
         return allRecords.filter { $0.timestamp >= startDate && $0.timestamp <= endDate }
     }

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import WidgetKit
 
 public struct SettingsView: View {
     @EnvironmentObject private var viewModel: SettingsViewModel
@@ -22,6 +23,9 @@ public struct SettingsView: View {
                         Text("PHP (₱)").tag("PHP")
                         Text("GBP (£)").tag("GBP")
                         Text("JPY (¥)").tag("JPY")
+                    }
+                    .onChange(of: viewModel.currencyCode) { _, _ in
+                        WidgetCenter.shared.reloadAllTimelines()
                     }
                     
                     Picker("Appearance", selection: Binding(

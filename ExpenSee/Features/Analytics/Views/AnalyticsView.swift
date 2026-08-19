@@ -11,11 +11,13 @@ import ExpenSeeCore
 
 public struct AnalyticsView: View {
     @Environment(\.modelContext) private var context
-    @StateObject private var viewModel = AnalyticsViewModel()
+    @State private var viewModel = AnalyticsViewModel()
     
     public init() {}
     
     public var body: some View {
+        @Bindable var viewModel = viewModel
+        
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
@@ -88,11 +90,11 @@ public struct AnalyticsView: View {
                         Text("Biggest Expenses")
                             .font(.headline)
                         
-                        if viewModel.biggestExpensesList.isEmpty {
+                        if viewModel.biggestTransactionsList.isEmpty {
                             Text("No major expenses recorded.")
                                 .foregroundColor(.secondary)
                         } else {
-                            ForEach(viewModel.biggestExpensesList) { record in
+                            ForEach(viewModel.biggestTransactionsList) { record in
                                 HStack {
                                     VStack(alignment: .leading) {
                                         Text(record.note.isEmpty ? "Expense" : record.note)

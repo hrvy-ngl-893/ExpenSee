@@ -11,11 +11,11 @@ import SwiftUI
 @main
 struct ExpenSeeWidgetBundle: WidgetBundle {
     var body: some Widget {
-        DailyBudgetWidget()
+        SpendingWidget()
         QuickLogWidget()
         
         #if os(iOS)
-        SpendingLiveActivity()
+        LiveActivity()
         #endif
     }
 }

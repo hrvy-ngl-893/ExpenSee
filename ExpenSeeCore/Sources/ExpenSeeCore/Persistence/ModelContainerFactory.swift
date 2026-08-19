@@ -13,16 +13,16 @@ public enum ModelContainerFactory {
 
     private static let schema = Schema([
         SpendingCategory.self,
-        MoneySource.self,
-        SpendingRecord.self,
-        Budget.self,
-        Deduction.self,
-        RecurringPayment.self
+        Account.self,
+        Transaction.self,
+        SpendingLimit.self,
+        RecurringPayment.self,
+        SavingsGoal.self
     ])
 
     public static let shared: ModelContainer = {
         let appGroupID = "group.com.harvy-angelo-tan.ExpenSee"
-        
+
         let configuration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: false,
@@ -33,7 +33,7 @@ public enum ModelContainerFactory {
             return try ModelContainer(for: schema, configurations: [configuration])
         } catch {
             print("❌ SwiftData Load Error: \(error.localizedDescription)")
-            
+
             #if DEBUG
             do {
                 let fallbackConfig = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
@@ -50,7 +50,7 @@ public enum ModelContainerFactory {
     // MARK: - Preview Container with Mock Data
     public static let inMemoryPreview: ModelContainer = {
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
-        
+
         do {
             let container = try ModelContainer(for: schema, configurations: [configuration])
             seedMockData(into: container.mainContext)
@@ -61,14 +61,28 @@ public enum ModelContainerFactory {
     }()
 
     private static func seedMockData(into context: ModelContext) {
-        // 1. Create Categories and Sources
+        // 1. Categories and an account
         let sampleCategory = SpendingCategory(name: "Food & Drinks", hexColor: "#0FD76A")
         let entertainmentCategory = SpendingCategory(name: "Entertainment", hexColor: "#FF9500")
+
+        let sampleAccount = Account(
+            name: "Credit Card",
+            balance: 2000,
+            currencyCode: "USD",
+            hexColor: "#0FD76A",
+            iconString: "fork"
+        )
         
-        let sampleSource = MoneySource(name: "Credit Card", balance: 2000, hexColor: "#0FD76A", iconString: "fork")
-        
-        // 2. Create Budgets
-        let monthlyFoodBudget = Budget(
+        let sampleAccount2 = Account(
+            name: "Debit Card",
+            balance: 20000,
+            currencyCode: "PHP",
+            hexColor: "#0FD76A",
+            iconString: "fork"
+        )
+
+        // 2. Spending limits
+        let monthlyFoodLimit = SpendingLimit(
             name: "Monthly Dining",
             limitAmount: 500.00,
             period: .monthly,
@@ -76,8 +90,8 @@ public enum ModelContainerFactory {
             isActive: true,
             category: sampleCategory
         )
-        
-        let entertainmentBudget = Budget(
+
+        let entertainmentLimit = SpendingLimit(
             name: "Fun & Movies",
             limitAmount: 150.00,
             period: .monthly,
@@ -86,34 +100,37 @@ public enum ModelContainerFactory {
             category: entertainmentCategory
         )
 
-        // 3. Create Expenses and link them to categories, sources, and budgets
-        let sampleExpense1 = SpendingRecord(
+        // 3. Transactions linked to categories, account, and limits
+        let coffeeExpense = Transaction(
             amount: 4.50,
             note: "Coffee",
+            type: .expense,
             category: sampleCategory,
-            source: sampleSource
+            account: sampleAccount,
+            spendingLimit: monthlyFoodLimit
         )
-        sampleExpense1.budget = monthlyFoodBudget
 
-        let sampleExpense2 = SpendingRecord(
+        let groceriesExpense = Transaction(
             amount: 65.20,
             note: "Groceries",
+            type: .expense,
             category: sampleCategory,
-            source: sampleSource
+            account: sampleAccount,
+            spendingLimit: monthlyFoodLimit
         )
-        sampleExpense2.budget = monthlyFoodBudget
 
         // 4. Insert everything into the context
         context.insert(sampleCategory)
         context.insert(entertainmentCategory)
-        context.insert(sampleSource)
-        
-        context.insert(monthlyFoodBudget)
-        context.insert(entertainmentBudget)
-        
-        context.insert(sampleExpense1)
-        context.insert(sampleExpense2)
-        
+        context.insert(sampleAccount)
+        context.insert(sampleAccount2)
+
+        context.insert(monthlyFoodLimit)
+        context.insert(entertainmentLimit)
+
+        context.insert(coffeeExpense)
+        context.insert(groceriesExpense)
+
         try? context.save()
     }
 }

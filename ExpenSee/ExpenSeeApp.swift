@@ -12,8 +12,9 @@ import ExpenSeeCore
 @main
 struct ExpenSeeApp: App {
     private let container = ModelContainerFactory.shared
-    
+    #if os(iOS)
     @StateObject private var liveActivityManager = LiveActivityManager.shared
+    #endif
     @StateObject private var settings = SettingsViewModel()
     @State private var showAddExpenseSheet = false
     
@@ -21,7 +22,9 @@ struct ExpenSeeApp: App {
         WindowGroup {
             ContentView(showAddExpenseSheet: $showAddExpenseSheet)
                 .modelContainer(container)
+                #if os(iOS)
                 .environmentObject(liveActivityManager)
+                #endif
                 .environmentObject(settings)
                 .preferredColorScheme(settings.appTheme.colorScheme)
                 .onOpenURL { url in
@@ -36,6 +39,8 @@ struct ExpenSeeApp: App {
 #Preview {
     ContentView(showAddExpenseSheet: .constant(false))
         .modelContainer(ModelContainerFactory.inMemoryPreview)
+        #if os(iOS)
         .environmentObject(LiveActivityManager.shared)
+        #endif
         .environmentObject(SettingsViewModel())
 }

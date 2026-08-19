@@ -35,12 +35,12 @@ public class SpendingRepository {
         return category
     }
     
-    public func logSpending(amount: Decimal, category: SpendingCategory?, source: MoneySource, note: String = "") throws {
-        let record = SpendingRecord(
+    public func logSpending(amount: Decimal, category: SpendingCategory?, account: Account, note: String = "") throws {
+        let record = Transaction(
             amount: amount,
             note: note,
             category: category,
-            source: source
+            account: account
         )
         
         context.insert(record)
@@ -54,7 +54,7 @@ public class SpendingRepository {
         }
     }
     
-    public func delete(record: SpendingRecord) throws {
+    public func delete(record: Transaction) throws {
         context.delete(record)
         try context.save()
         
@@ -99,7 +99,7 @@ public class SpendingRepository {
         let startOfDay = calendar.startOfDay(for: Date())
         guard let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) else { return 0 }
         
-        let records = try context.fetch(FetchDescriptor<SpendingRecord>())
+        let records = try context.fetch(FetchDescriptor<Transaction>())
         let todaysRecords = records.filter { $0.timestamp >= startOfDay && $0.timestamp < endOfDay }
         return todaysRecords.reduce(Decimal(0)) { $0 + $1.amount }
     }

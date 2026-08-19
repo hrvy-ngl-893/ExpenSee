@@ -17,11 +17,11 @@ import ActivityKit
 public final class LiveActivityManager: ObservableObject {
     public static let shared = LiveActivityManager()
     
-    @Published public private(set) var currentActivity: Activity<ExpenSeeActivityAttributes>?
+    @Published public private(set) var currentActivity: Activity<LiveActivityAttributes>?
     
     private init() {
         // Restore reference if an activity is already running on app launch
-        currentActivity = Activity<ExpenSeeActivityAttributes>.activities.first(where: { $0.activityState == .active })
+        currentActivity = Activity<LiveActivityAttributes>.activities.first(where: { $0.activityState == .active })
     }
     
     /// Starts or updates a Live Activity for the selected budget and reloads widget timelines.
@@ -30,15 +30,17 @@ public final class LiveActivityManager: ObservableObject {
         spentToday: Decimal,
         baseDailyLimit: Decimal,
         budgetCycleName: String,
+        currencyCode: String,
         lastExpenseAmount: Decimal? = nil,
         lastExpenseCategory: String? = nil
     ) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         
-        let state = ExpenSeeActivityAttributes.ContentState(
+        let state = LiveActivityAttributes.ContentState(
             remainingBudget: remainingBudget,
             spentToday: spentToday,
             baseDailyLimit: baseDailyLimit,
+            currencyCode: currencyCode,
             lastExpenseAmount: lastExpenseAmount,
             lastExpenseCategory: lastExpenseCategory
         )
@@ -47,11 +49,19 @@ public final class LiveActivityManager: ObservableObject {
         if let activity = currentActivity, activity.activityState == .active {
             if activity.attributes.budgetCycleName == budgetCycleName {
                 Task {
+                    // Alert configuration signals high priority update to Dynamic Island
+                    let alertConfig = AlertConfiguration(
+                        title: "\(currencyCode) Updated",
+                        body: "Currency updated in Live Activity",
+                        sound: .default
+                    )
+                    
                     await activity.update(
-                        ActivityContent<ExpenSeeActivityAttributes.ContentState>(
+                        ActivityContent<LiveActivityAttributes.ContentState>(
                             state: state,
                             staleDate: nil
-                        )
+                        ),
+                        alertConfiguration: alertConfig
                     )
                     WidgetCenter.shared.reloadAllTimelines()
                 }
@@ -63,7 +73,7 @@ public final class LiveActivityManager: ObservableObject {
         }
         
         // Request a new activity if none is active or if the budget title changed
-        let attributes = ExpenSeeActivityAttributes(budgetCycleName: budgetCycleName)
+        let attributes = LiveActivityAttributes(budgetCycleName: budgetCycleName)
         do {
             let newActivity = try Activity.request(
                 attributes: attributes,

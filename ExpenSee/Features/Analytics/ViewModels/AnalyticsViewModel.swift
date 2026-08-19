@@ -8,7 +8,7 @@
 import Foundation
 import SwiftData
 import SwiftUI
-import Combine
+import Observation
 import ExpenSeeCore
 
 public enum AnalyticsTimeframe: String, CaseIterable, Identifiable {
@@ -36,8 +36,9 @@ public enum AnalyticsTimeframe: String, CaseIterable, Identifiable {
     }
 }
 
+@Observable
 @MainActor
-public final class AnalyticsViewModel: ObservableObject {
+public final class AnalyticsViewModel {
     public struct TrendPoint: Identifiable {
         public let id = UUID()
         public let date: Date
@@ -51,27 +52,26 @@ public final class AnalyticsViewModel: ObservableObject {
         public let percentage: Double
     }
     
+    @ObservationIgnored
     private let aggregator = AnalyticsAggregator()
     
-    @Published public var timeframe: AnalyticsTimeframe = .month
-    @Published public var categorySummaries: [CategorySummary] = []
-    @Published public var sourceSpending: [String: Decimal] = [:]
-    @Published public var dailyTrend: [TrendPoint] = []
-    @Published public var biggestExpensesList: [SpendingRecord] = []
-    @Published public var totalSpent: Decimal = 0
-    @Published public var averageDailySpend: Decimal = 0
+    public var timeframe: AnalyticsTimeframe = .month
+    public var categorySummaries: [CategorySummary] = []
+    public var sourceSpending: [String: Decimal] = [:]
+    public var dailyTrend: [TrendPoint] = []
+    public var biggestTransactionsList: [ExpenSeeCore.Transaction] = []
+    public var totalSpent: Decimal = 0
+    public var averageDailySpend: Decimal = 0
     
     public init() {}
     
     public func loadData(context: ModelContext) {
         let range = timeframe.dateRange()
         do {
-            // 1. Fetch raw category dict and match with actual category entities if possible
             let rawCategoryDict = try aggregator.totalSpentByCategory(context: context, from: range.start, to: range.end)
             let grandTotalDecimal = try aggregator.totalSpent(context: context, from: range.start, to: range.end)
             let grandTotalDouble = NSDecimalNumber(decimal: grandTotalDecimal).doubleValue
             
-            // Fetch all categories to map names to actual SpendingCategory objects
             let allCategories = try context.fetch(FetchDescriptor<SpendingCategory>())
             let categoryMap = Dictionary(uniqueKeysWithValues: allCategories.map { ($0.name, $0) })
             
@@ -80,7 +80,6 @@ public final class AnalyticsViewModel: ObservableObject {
                 let amountDouble = NSDecimalNumber(decimal: amountDecimal).doubleValue
                 let percentage = grandTotalDouble > 0 ? (amountDouble / grandTotalDouble) * 100 : 0
                 
-                // Fallback dummy category if it's "Uncategorized" or missing from DB
                 let categoryEntity = categoryMap[name] ?? SpendingCategory(name: name, hexColor: "888888", iconString: "questionmark.circle")
                 
                 summaries.append(
@@ -93,10 +92,8 @@ public final class AnalyticsViewModel: ObservableObject {
             }
             self.categorySummaries = summaries.sorted { $0.totalAmount > $1.totalAmount }
             
-            // 2. Source Spending
             self.sourceSpending = try aggregator.totalSpentBySource(context: context, from: range.start, to: range.end)
             
-            // 3. Daily Trend
             let rawTrend = try aggregator.dailySpendingTrend(context: context, from: range.start, to: range.end)
             self.dailyTrend = rawTrend.map { item in
                 TrendPoint(
@@ -105,8 +102,7 @@ public final class AnalyticsViewModel: ObservableObject {
                 )
             }
             
-            // 4. Miscellaneous metrics
-            self.biggestExpensesList = try aggregator.biggestExpenses(context: context, from: range.start, to: range.end, limit: 5)
+            self.biggestTransactionsList = try aggregator.biggestExpenses(context: context, from: range.start, to: range.end, limit: 5)
             self.totalSpent = grandTotalDecimal
             self.averageDailySpend = try aggregator.averageDailySpend(context: context, from: range.start, to: range.end)
             

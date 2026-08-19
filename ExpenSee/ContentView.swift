@@ -28,7 +28,7 @@ struct ContentView: View {
                 }
                 .tag(Tab.dashboard)
             
-            MoneySourcesView()
+            AccountsView()
                 .tabItem {
                     Label("Source", systemImage: "creditcard.fill")
                 }
@@ -52,6 +52,8 @@ struct ContentView: View {
 #Preview {
     ContentView(showAddExpenseSheet: .constant(false))
         .modelContainer(ModelContainerFactory.inMemoryPreview)
+        #if os(iOS)
         .environmentObject(LiveActivityManager.shared)
+        #endif
         .environmentObject(SettingsViewModel())
 }
