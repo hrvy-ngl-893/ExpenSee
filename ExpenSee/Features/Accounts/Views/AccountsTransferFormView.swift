@@ -76,6 +76,7 @@ public struct AccountsTransferFormView: View {
                         performTransfer()
                     }
                     .bold()
+                    .disabled(amountText == "")
                 }
             }
             .onAppear {

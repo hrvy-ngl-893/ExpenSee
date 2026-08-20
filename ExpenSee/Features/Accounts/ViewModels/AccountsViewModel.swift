@@ -4,6 +4,20 @@
 //
 //  Created by Harvy Angelo Tan on 8/16/26.
 //
+//  CHANGES FROM ORIGINAL:
+//  `addExpense` used to duplicate SpendingRepository.logSpending's balance
+//  mutation + transaction creation inline. Two problems with that:
+//    1. It never called refreshExtensions(), so an expense logged from
+//       wherever this method is used wouldn't update the home screen
+//       widget or an in-progress Live Activity — only expenses logged via
+//       TransactionView (which uses SpendingRepository directly) did.
+//    2. There was no way to pass a spendingLimit, so expenses logged here
+//       could never be explicitly earmarked against a limit.
+//  Now it delegates to SpendingRepository so there's exactly one code path
+//  for "log an expense," and both entry points stay in sync.
+//  (addIncome/transfer are untouched — they don't affect spending-limit
+//  totals or the widget, so there's no consistency issue there.)
+//
 
 import Foundation
 import SwiftData
@@ -55,6 +69,75 @@ public final class AccountsViewModel {
             return true
         } catch {
             print("Failed to save Transfer transaction: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    @discardableResult
+    public func addIncome(
+        to account: Account,
+        amountText: String,
+        note: String,
+        category: SpendingCategory? = nil,
+        savingsGoal: SavingsGoal? = nil,
+        in context: ModelContext
+    ) -> Bool {
+        guard
+            let amount = parseBalance(amountText),
+            amount > 0
+        else { return false }
+
+        // 1. Mutate the target account balance
+        account.balance += amount
+
+        // 2. Create the income transaction
+        let incomeTransaction = Transaction(
+            amount: amount,
+            timestamp: .now,
+            note: note,
+            type: .income,
+            category: category,
+            account: account,
+            savingsGoal: savingsGoal,
+            currencyCode: account.currencyCode
+        )
+
+        context.insert(incomeTransaction)
+
+        do {
+            try context.save()
+            return true
+        } catch {
+            print("Failed to save Income transaction: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    @discardableResult
+    public func addExpense(
+        from account: Account,
+        amountText: String,
+        note: String,
+        category: SpendingCategory? = nil,
+        spendingLimit: SpendingLimit? = nil,
+        in context: ModelContext
+    ) -> Bool {
+        guard
+            let amount = parseBalance(amountText),
+            amount > 0
+        else { return false }
+
+        do {
+            try SpendingRepository(context: context).logSpending(
+                amount: amount,
+                category: category,
+                account: account,
+                spendingLimit: spendingLimit,
+                note: note
+            )
+            return true
+        } catch {
+            print("Failed to save Expense transaction: \(error.localizedDescription)")
             return false
         }
     }
@@ -123,6 +206,9 @@ public final class AccountsViewModel {
         account.currencyCode = currencyCode
         account.hexColor = hexColor
         account.iconString = iconString
+        // Note: any SpendingLimit scoped to this account will pick up the
+        // new currencyCode automatically on next read — it's derived live,
+        // not snapshotted, so there's nothing else to update here.
 
         do {
             try context.save()

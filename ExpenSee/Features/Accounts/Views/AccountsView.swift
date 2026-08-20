@@ -25,6 +25,7 @@ public struct AccountsView: View {
         case add
         case edit(Account)
         case transfer(source: Account?)
+        case income(target: Account?)
 
         var id: String {
             switch self {
@@ -34,6 +35,8 @@ public struct AccountsView: View {
                 return "edit_\(account.id.uuidString)"
             case .transfer(let account):
                 return "transfer_\(account?.id.uuidString ?? "general")"
+            case .income(let account):
+                return "income_\(account?.id.uuidString ?? "general")"
             }
         }
     }
@@ -49,22 +52,9 @@ public struct AccountsView: View {
             List {
                 // MARK: - Header (Total Balance + Pie Chart)
                 Section {
-                    VStack(spacing: 16) {
-                        // Relocated Total Balance figure to avoid inner chart overflow
-                        VStack(spacing: 4) {
-                            Text("Total Balance")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-
-                            Text(totalBalance, format: .currency(code: settings.currencyCode))
-                                .font(.system(size: 32, weight: .bold, design: .rounded))
-                                .minimumScaleFactor(0.7)
-                                .lineLimit(1)
-                        }
-                        .padding(.top, 8)
-
+                    VStack() {
                         AccountsChartView()
-                            .frame(height: 180)
+                            .frame(minHeight: 180)
                     }
                     .frame(maxWidth: .infinity)
                     .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 16, trailing: 16))
@@ -83,6 +73,12 @@ public struct AccountsView: View {
             .navigationTitle("Accounts")
             .toolbar {
                 ToolbarItemGroup(placement: .confirmationAction) {
+                    Button(action: { activeSheet = .income(target: nil) }) {
+                        Label("Add Income", systemImage: "arrow.down.circle")
+                    }
+                    .disabled(accounts.isEmpty)
+                    .tint(.green)
+
                     Button(action: { activeSheet = .transfer(source: nil) }) {
                         Label("Transfer", systemImage: "arrow.left.arrow.right")
                     }
@@ -103,6 +99,9 @@ public struct AccountsView: View {
                         .presentationDetents([.medium, .large])
                 case .transfer(let sourceAccount):
                     AccountsTransferFormView(initialSourceAccount: sourceAccount)
+                        .presentationDetents([.medium, .large])
+                case .income(let targetAccount):
+                    AccountsIncomeFormView(initialTargetAccount: targetAccount)
                         .presentationDetents([.medium, .large])
                 }
             }
@@ -146,28 +145,34 @@ public struct AccountsView: View {
         .onTapGesture {
             activeSheet = .edit(account)
         }
+        // Example: Splitting across edges in AccountsView
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(role: .destructive) {
-                confirmDelete(account)
-            } label: {
+            Button(role: .destructive) { confirmDelete(account) } label: {
                 Label("Delete", systemImage: "trash")
             }
-
-            Button {
-                activeSheet = .edit(account)
-            } label: {
+            Button { activeSheet = .edit(account) } label: {
                 Label("Edit", systemImage: "pencil")
             }
             .tint(.blue)
-
-            Button {
-                activeSheet = .transfer(source: account)
-            } label: {
+        }
+        .swipeActions(edge: .leading) {
+            Button { activeSheet = .income(target: account) } label: {
+                Label("Income", systemImage: "arrow.down.circle")
+            }
+            .tint(.green)
+            
+            Button { activeSheet = .transfer(source: account) } label: {
                 Label("Transfer", systemImage: "arrow.left.arrow.right")
             }
             .tint(.orange)
         }
         .contextMenu {
+            Button {
+                activeSheet = .income(target: account)
+            } label: {
+                Label("Add Income", systemImage: "arrow.down.circle")
+            }
+
             Button {
                 activeSheet = .transfer(source: account)
             } label: {

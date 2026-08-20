@@ -12,367 +12,409 @@ import ExpenSeeCore
 import ActivityKit
 #endif
 
-struct DashboardView: View {
+public struct DashboardView: View {
     @Environment(\.modelContext) private var context
     @EnvironmentObject private var settings: SettingsViewModel
 
-    @Query private var transactions: [ExpenSeeCore.Transaction]
-    @Query(sort: \SpendingLimit.startDate, order: .reverse) private var allSpendingLimits: [SpendingLimit]
+    @State private var viewModel = DashboardViewModel()
 
-    @State private var showingEntrySheet = false
-    @State private var isLiveActivityEnabled = false
+    @Query private var transactions: [ExpenSeeCore.Transaction]
+    @Query(sort: \SpendingLimit.startDate, order: .reverse)
+    private var allSpendingLimits: [SpendingLimit]
+
+    @State private var activeSheet: FormRoute?
+    @State private var itemPendingDeletion: ExpenSeeCore.Transaction?
+    @State private var showDeleteConfirmation: Bool = false
+    @State private var isLiveActivityEnabled: Bool = false
 
     @AppStorage("selectedLiveActivityBudgetID", store: UserDefaults(suiteName: "group.com.harvy-angelo-tan.ExpenSee"))
     private var selectedSpendingLimitIDString: String = ""
 
+    private enum FormRoute: Identifiable {
+        case entry
+        case income
+        case transfer
+        case edit(ExpenSeeCore.Transaction)
+
+        var id: String {
+            switch self {
+            case .entry:
+                return "entry"
+            case .income:
+                return "income"
+            case .transfer:
+                return "transfer"
+            case .edit(let transaction):
+                return "edit_\(transaction.persistentModelID)"
+            }
+        }
+    }
+
+    public init() {}
+
     private var activeSpendingLimits: [SpendingLimit] {
         allSpendingLimits.filter { $0.isActive }
     }
-    
+
     private var featuredSpendingLimit: SpendingLimit? {
-        if !selectedSpendingLimitIDString.isEmpty,
-           let budget = activeSpendingLimits.first(where: { String(describing: $0.persistentModelID) == selectedSpendingLimitIDString }) {
-            return budget
-        }
-        
-        // Priority fallbacks
-        if let daily = activeSpendingLimits.first(where: { $0.period == .daily }) {
-            return daily
-        }
-        if let weekly = activeSpendingLimits.first(where: { $0.period == .weekly }) {
-            return weekly
-        }
-        if let quincena = activeSpendingLimits.first(where: { $0.period == .quincena }) {
-            return quincena
-        }
-        if let monthly = activeSpendingLimits.first(where: { $0.period == .monthly }) {
-            return monthly
-        }
-        if let yearly = activeSpendingLimits.first(where: { $0.period == .yearly }) {
-            return yearly
-        }
-        
-        return activeSpendingLimits.first
+        viewModel.featuredSpendingLimit(from: activeSpendingLimits, selectedIDString: selectedSpendingLimitIDString)
     }
 
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    if activeSpendingLimits.count > 1 {
-                        spendingLimitPickerSection
-                    }
+    private var recentTransactions: [ExpenSeeCore.Transaction] {
+        Array(transactions.prefix(5))
+    }
 
-                    if let featured = featuredSpendingLimit {
-                        heroSpendingLimitCard(for: featured)
-                    } else {
-                        emptyBudgetHero
-                    }
+    // MARK: - Body
+    // NOTE: This is intentionally kept as a *thin* chain. Each modifier's closure
+    // has been extracted into its own named function/property below so the type
+    // checker never has to solve one enormous combined expression. If you add
+    // new modifiers here, prefer pointing them at a named method rather than
+    // inlining another closure directly in this chain.
 
-                    if !activeSpendingLimits.isEmpty {
-                        budgetMetricsSection
-                    }
+    public var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            NavigationStack {
+                listContent
+                    .navigationTitle("Dashboard")
+                    .toolbar { liveActivityToolbarContent }
+                    .sheet(item: $activeSheet, content: sheetContent)
+                    .onAppear(perform: handleOnAppear)
+                    .onChange(of: transactions, handleTransactionsChange)
+                    .onChange(of: selectedSpendingLimitIDString, handleSelectionChange)
+                    .confirmationDialog(
+                        "Delete Expense?",
+                        isPresented: $showDeleteConfirmation,
+                        titleVisibility: .visible,
+                        presenting: itemPendingDeletion,
+                        actions: deleteConfirmationActions,
+                        message: deleteConfirmationMessage
+                    )
+            }
 
-                    addExpenseButton
-
-                    budgetNavigationTile
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Recent Expenses")
-                            .font(.headline)
-                            .padding(.leading, 4)
-
-                        TransactionsListView()
-                    }
-                }
-                .padding()
-            }
-            .background(.secondary.opacity(0.1))
-            .navigationTitle("Dashboard")
-            .toolbar {
-                #if os(iOS) && canImport(ActivityKit)
-                ToolbarItem(placement: .topBarTrailing) {
-                    Toggle(isOn: $isLiveActivityEnabled) {
-                        Label("Live Activity", systemImage: isLiveActivityEnabled ? "bell.badge.fill" : "bell")
-                    }
-                    .toggleStyle(.button)
-                    .tint(.accentColor)
-                    .onChange(of: isLiveActivityEnabled) { _, newValue in
-                        handleLiveActivityToggle(enabled: newValue)
-                    }
-                }
-                #endif
-            }
-            .sheet(isPresented: $showingEntrySheet) {
-                EntryView()
-            }
-            .onAppear {
-                checkLiveActivityStatus()
-                updateLiveActivity()
-            }
-            .onChange(of: transactions) { _, _ in
-                updateLiveActivity()
-            }
-            .onChange(of: selectedSpendingLimitIDString) { _, _ in
-                restartLiveActivityForNewSelection()
-            }
+            // MARK: - Floating Action Buttons
+            floatingActionOverlay
         }
     }
 
-    // MARK: - Components
+    // MARK: - List
 
-    private var spendingLimitPickerSection: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(activeSpendingLimits, id: \.persistentModelID) { spendingLimit in
-                    let isSelected = featuredSpendingLimit?.persistentModelID == spendingLimit.persistentModelID
-                    Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedSpendingLimitIDString = String(describing: spendingLimit.persistentModelID)
-                        }
-                    } label: {
-                        HStack(spacing: 6) {
-                            if let category = spendingLimit.category {
-                                Image(systemName: category.iconString)
-                            }
-                            Text(spendingLimit.name)
-                                .font(.subheadline)
-                                .fontWeight(isSelected ? .semibold : .regular)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(isSelected ? Color.accentColor : Color.gray.opacity(0.15), in: Capsule())
-                        .foregroundStyle(isSelected ? .white : .primary)
-                    }
-                }
+    private var listContent: some View {
+        List {
+            // MARK: - Spending Limit Picker Section
+            pickerSection
+
+            // MARK: - Hero Spending Limit Card Section
+            heroSection
+
+            // MARK: - Active Budgets Metrics Section
+            if !activeSpendingLimits.isEmpty {
+                metricsSection
             }
+
+            // MARK: - Recent Transactions Section
+            transactionsSection
+        }
+        .safeAreaPadding(.bottom, 80)
+        .environment(\.defaultMinListRowHeight, 0)
+        .listStyle(.insetGrouped)
+        .listRowSpacing(0)
+        .listSectionSpacing(.custom(16))
+    }
+
+    // MARK: - Sheet
+
+    // DashboardView.swift
+    @ViewBuilder
+    private func sheetContent(for route: FormRoute) -> some View {
+        switch route {
+        case .entry:
+            TransactionView(defaultSpendingLimit: featuredSpendingLimit)
+        case .income:
+            AccountsIncomeFormView()
+        case .transfer:
+            AccountsTransferFormView()
+        case .edit(let transaction):
+            TransactionEditView(transaction: transaction)
         }
     }
 
-    private func heroSpendingLimitCard(for spendingLimit: SpendingLimit) -> some View {
-        let spent = spentForSpendingLimit(spendingLimit)
-        let limit = spendingLimit.limitAmount
-        let remaining = limit - spent
+    // MARK: - Confirmation Dialog
 
-        let limitDouble = NSDecimalNumber(decimal: limit).doubleValue
-        let remainingDouble = NSDecimalNumber(decimal: remaining).doubleValue
-        let ratio = limitDouble > 0 ? min(max(remainingDouble / limitDouble, 0), 1) : 0
-
-        let statusColor: Color = {
-            if remaining < 0 { return .red }
-            if ratio < 0.2 { return .orange }
-            return .green
-        }()
-
-        return VStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .stroke(Color.primary.opacity(0.08), lineWidth: 20)
-
-                Circle()
-                    .trim(from: 0, to: CGFloat(ratio))
-                    .stroke(statusColor, style: StrokeStyle(lineWidth: 20, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-
-                VStack(spacing: 4) {
-                    Text(spendingLimit.name)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.secondary)
-
-                    Text(remaining, format: .currency(code: settings.currencyCode))
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .foregroundStyle(remaining >= 0 ? .primary : Color.red)
-                        .minimumScaleFactor(0.7)
-                        .lineLimit(1)
-
-                    Text(remaining < 0 ? "Over Budget" : "\(Int(ratio * 100))% remaining")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(statusColor)
-                }
-                .padding(.horizontal, 20)
-            }
-            .padding(.vertical, 16)
-            .frame(width: 220, height: 220)
+    @ViewBuilder
+    private func deleteConfirmationActions(for record: ExpenSeeCore.Transaction) -> some View {
+        Button("Delete Permanently", role: .destructive) {
+            deletePendingItem(record)
         }
-        .padding(.vertical, 16)
-        .frame(maxWidth: .infinity)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        Button("Cancel", role: .cancel) {}
     }
 
-    private var emptyBudgetHero: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "chart.pie")
-                .font(.system(size: 40))
-                .foregroundStyle(.secondary)
-            Text("No Active Budgets")
-                .font(.headline)
-            Text("Set a daily, weekly, monthly, or category budget to track spend.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding(32)
-        .frame(maxWidth: .infinity)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+    private func deleteConfirmationMessage(for record: ExpenSeeCore.Transaction) -> Text {
+        let title = record.note.isEmpty ? "Transaction" : record.note
+        return Text("Are you sure you want to delete \"\(title)\"?")
     }
 
-    private var budgetMetricsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Active Limits & Spending")
-                .font(.headline)
-                .padding(.leading, 4)
+    // MARK: - Sections
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                ForEach(activeSpendingLimits, id: \.persistentModelID) { spendingLimit in
-                    SpendingLimitMetricCard(
-                        spendingLimit: spendingLimit,
-                        spent: spentForSpendingLimit(spendingLimit),
-                        currencyCode: settings.currencyCode
+    @ViewBuilder
+    private var pickerSection: some View {
+        Section {
+            VStack {
+                if activeSpendingLimits.count > 1 {
+                    SpendingLimitPickerView(
+                        limits: activeSpendingLimits,
+                        featuredID: featuredSpendingLimit?.persistentModelID,
+                        selectedIDString: $selectedSpendingLimitIDString
                     )
                 }
             }
+            .padding(.top, 8)
+            .frame(maxWidth: .infinity)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
         }
+    }
+
+    @ViewBuilder
+    private var heroSection: some View {
+        Section {
+            if let featured = featuredSpendingLimit {
+                heroCard(for: featured)
+            } else {
+                EmptyBudgetHeroView()
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    .listRowBackground(Color.clear)
+            }
+        }
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets())
+    }
+
+    @ViewBuilder
+    private func heroCard(for featured: SpendingLimit) -> some View {
+        let (remaining, _): (Decimal, Decimal) = viewModel.remainingAndSpent(for: featured, context: context)
+        let ratio: Double = viewModel.progressRatio(remaining: remaining, limit: featured.limitAmount)
+        let statusColor: Color = viewModel.statusColor(remaining: remaining, ratio: ratio)
+
+        HeroSpendingLimitCard(
+            spendingLimit: featured,
+            remaining: remaining,
+            ratio: ratio,
+            statusColor: statusColor
+        )
+    }
+
+    @ViewBuilder
+    private var metricsSection: some View {
+        Section {
+            unifiedBudgetMetricsGrid
+        }
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets())
+    }
+
+    @ViewBuilder
+    private var transactionsSection: some View {
+        Section(header: Text("Recent Transactions")) {
+            if transactions.isEmpty {
+                ContentUnavailableView(
+                    "No Expenses Found",
+                    systemImage: "creditcard.trianglebadge.exclamationmark",
+                    description: Text("Added expenses will appear here.")
+                )
+                .padding(.vertical, 32)
+            } else {
+                ForEach(recentTransactions) { transaction in
+                    TransactionsRow(
+                        transaction: transaction,
+                        currencyCode: settings.currencyCode,
+                        onEdit: {
+                            activeSheet = .edit(transaction)
+                        },
+                        onDelete: {
+                            confirmDelete(transaction)
+                        }
+                    )
+                }
+                .onDelete(perform: deleteAtOffsets)
+            }
+        }
+    }
+
+    // MARK: - Subviews & Controls
+
+    private var unifiedBudgetMetricsGrid: some View {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+            ForEach(activeSpendingLimits, id: \.persistentModelID) { limit in
+                budgetCard(for: limit)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func budgetCard(for limit: SpendingLimit) -> some View {
+        let (remaining, spent): (Decimal, Decimal) = viewModel.remainingAndSpent(for: limit, context: context)
+
+        UnifiedBudgetCard(
+            spendingLimit: limit,
+            spent: spent,
+            remaining: remaining
+        )
+    }
+
+    private var floatingActionOverlay: some View {
+        HStack(spacing: 16) {
+            addIncomeButton
+                .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
+            addTransferButton
+                .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
+            addExpenseButton
+                .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
+        }
+        .padding(20)
     }
 
     private var addExpenseButton: some View {
-        Button(action: { showingEntrySheet = true }) {
-            Label("Add Expense", systemImage: "plus.circle.fill")
-                .font(.headline)
+        Button(action: { activeSheet = .entry }) {
+            Label("Expense", systemImage: "arrow.up.circle")
+                .font(.caption)
+                .fontWeight(.semibold)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 4)
+                .padding(.vertical, 8)
         }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
+        .buttonStyle(.glass)
+        .tint(.red)
     }
 
-    private var budgetNavigationTile: some View {
-        NavigationLink(destination: SpendingLimitView()) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Manage Budgets")
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                    
-                    Text("\(activeSpendingLimits.count) Active Budget\(activeSpendingLimits.count == 1 ? "" : "s")")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.tertiary)
-            }
-            .padding()
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+    private var addIncomeButton: some View {
+        Button(action: { activeSheet = .income }) {
+            Label("Income", systemImage: "arrow.down.circle")
+                .font(.caption)
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
         }
+        .buttonStyle(.glass)
+        .tint(.green)
     }
 
-    // MARK: - Calculations
-
-    private func spentForSpendingLimit(_ spendingLimit: SpendingLimit) -> Decimal {
-        let calendar = Calendar.current
-        let now = Date()
-
-        let filteredTransactions = transactions.filter { transaction in
-            if let limitCategory = spendingLimit.category {
-                guard transaction.category?.persistentModelID == limitCategory.persistentModelID else {
-                    return false
-                }
-            }
-
-            let date = transaction.timestamp
-
-            switch spendingLimit.period {
-            case .daily:
-                return calendar.isDate(date, inSameDayAs: now)
-
-            case .weekly:
-                return calendar.isDate(date, equalTo: now, toGranularity: .weekOfYear) &&
-                       calendar.isDate(date, equalTo: now, toGranularity: .yearForWeekOfYear)
-
-            case .quincena:
-                guard calendar.isDate(date, equalTo: now, toGranularity: .month) &&
-                      calendar.isDate(date, equalTo: now, toGranularity: .year) else {
-                    return false
-                }
-                let nowDay = calendar.component(.day, from: now)
-                let transactionDay = calendar.component(.day, from: date)
-                return (nowDay <= 15 && transactionDay <= 15) || (nowDay > 15 && transactionDay > 15)
-
-            case .monthly:
-                return calendar.isDate(date, equalTo: now, toGranularity: .month) &&
-                       calendar.isDate(date, equalTo: now, toGranularity: .year)
-
-            case .yearly:
-                return calendar.isDate(date, equalTo: now, toGranularity: .year)
-
-            case .custom:
-                let afterStart = date >= spendingLimit.startDate
-                let beforeEnd = spendingLimit.endDate == nil || date <= spendingLimit.endDate!
-                return afterStart && beforeEnd
-            }
+    private var addTransferButton: some View {
+        Button(action: { activeSheet = .transfer }) {
+            Label("Transfer", systemImage: "arrow.left.arrow.right")
+                .font(.caption)
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
         }
-
-        return filteredTransactions.reduce(0) { $0 + $1.amount }
+        .buttonStyle(.glass)
+        .tint(.orange)
     }
 
-    // MARK: - Live Activity Updates
+    @ToolbarContentBuilder
+    private var liveActivityToolbarContent: some ToolbarContent {
+#if os(iOS) && canImport(ActivityKit)
+        ToolbarItem(placement: .topBarTrailing) {
+            Toggle(isOn: $isLiveActivityEnabled) {
+                Label("Live Activity", systemImage: isLiveActivityEnabled ? "bell.badge.fill" : "bell")
+            }
+            .toggleStyle(.button)
+            .tint(.accentColor)
+            .onChange(of: isLiveActivityEnabled) { _, newValue in
+                handleLiveActivityToggle(enabled: newValue)
+            }
+        }
+#endif
+    }
+
+    // MARK: - Data Actions
+
+    private func confirmDelete(_ transaction: ExpenSeeCore.Transaction) {
+        itemPendingDeletion = transaction
+        showDeleteConfirmation = true
+    }
+
+    private func deleteAtOffsets(at offsets: IndexSet) {
+        for index in offsets {
+            guard index < recentTransactions.count else { continue }
+            let record = recentTransactions[index]
+            context.delete(record)
+        }
+        try? context.save()
+    }
+
+    private func deletePendingItem(_ record: ExpenSeeCore.Transaction) {
+        context.delete(record)
+        try? context.save()
+    }
+
+    // MARK: - Lifecycle / Change Handlers
+    // Pulled out of the `body` chain (rather than inlined as `{ _, _ in ... }`
+    // closures) so each has an explicit, independently-checked signature.
+
+    private func handleOnAppear() {
+        checkLiveActivityStatus()
+        updateLiveActivity()
+    }
+
+    private func handleTransactionsChange(
+        _ oldValue: [ExpenSeeCore.Transaction],
+        _ newValue: [ExpenSeeCore.Transaction]
+    ) {
+        updateLiveActivity()
+    }
+
+    private func handleSelectionChange(_ oldValue: String, _ newValue: String) {
+        restartLiveActivityForNewSelection()
+    }
+
+    // MARK: - Live Activity Handlers
 
     private func checkLiveActivityStatus() {
-        #if os(iOS) && canImport(ActivityKit)
-        isLiveActivityEnabled = LiveActivityManager.shared.currentActivity != nil
-        #endif
+#if os(iOS) && canImport(ActivityKit)
+        let isActive = LiveActivityManager.shared.currentActivity?.activityState == .active
+        if isLiveActivityEnabled != isActive {
+            isLiveActivityEnabled = isActive
+        }
+#endif
     }
 
     private func handleLiveActivityToggle(enabled: Bool) {
-        #if os(iOS) && canImport(ActivityKit)
+#if os(iOS) && canImport(ActivityKit)
         if enabled {
             updateLiveActivity()
         } else {
-            LiveActivityManager.shared.endActivity()
+            viewModel.endLiveActivity()
         }
-        #endif
+#endif
     }
 
     private func restartLiveActivityForNewSelection() {
-        #if os(iOS) && canImport(ActivityKit)
+#if os(iOS) && canImport(ActivityKit)
         guard isLiveActivityEnabled else { return }
-        LiveActivityManager.shared.endActivity()
+        viewModel.endLiveActivity()
         updateLiveActivity()
-        #endif
+#endif
     }
 
     private func updateLiveActivity() {
-        #if os(iOS) && canImport(ActivityKit)
+#if os(iOS) && canImport(ActivityKit)
         guard isLiveActivityEnabled, let featured = featuredSpendingLimit else { return }
-        
-        let spent = spentForSpendingLimit(featured)
-        let remaining = featured.limitAmount - spent
-        
         let calendar = Calendar.current
-        let todayRecords = transactions.filter { calendar.isDateInToday($0.timestamp) }
-        let lastRecord = todayRecords.sorted(by: { $0.timestamp > $1.timestamp }).first
+        let todaysTransactions = transactions.filter { calendar.isDateInToday($0.timestamp) }
 
-        LiveActivityManager.shared.updateOrStartActivity(
-            remainingBudget: remaining,
-            spentToday: spent,
-            baseDailyLimit: featured.limitAmount,
-            budgetCycleName: featured.name,
-            currencyCode: settings.currencyCode,
-            lastExpenseAmount: lastRecord?.amount,
-            lastExpenseCategory: lastRecord?.category?.name
+        viewModel.startOrUpdateLiveActivity(
+            for: featured,
+            context: context,
+            todaysTransactions: todaysTransactions,
+            currencyCode: featured.currencyCode
         )
-        #endif
+#endif
     }
 }
 
 #Preview {
-    DashboardView()
-        .modelContainer(ModelContainerFactory.shared)
-        .environmentObject(SettingsViewModel())
+    NavigationStack {
+        DashboardView()
+            .modelContainer(ModelContainerFactory.inMemoryPreview)
+            .environmentObject(SettingsViewModel())
+    }
 }

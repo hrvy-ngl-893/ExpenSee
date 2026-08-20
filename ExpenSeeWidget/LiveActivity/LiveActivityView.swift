@@ -81,6 +81,11 @@ struct LiveActivityLockScreenView: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
+                } else if context.state.remainingBudget < 0 {
+                    Text("Over budget")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 } else {
                     Text("No spending yet")
                         .font(.caption2)

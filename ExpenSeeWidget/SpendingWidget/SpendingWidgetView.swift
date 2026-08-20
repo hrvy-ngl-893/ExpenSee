@@ -9,16 +9,13 @@ import SwiftUI
 import WidgetKit
 
 struct SpendingWidgetView: View {
-    @AppStorage("userCurrencyCode", store: UserDefaults(suiteName: "group.com.harvy-angelo-tan.ExpenSee"))
-    private var currencyCode: String = "USD"
-    
     @Environment(\.widgetFamily) var family
     var entry: SpendingTimelineProvider.Entry
 
     var body: some View {
         switch family {
         #if os(iOS)
-        case .accessoryCircular, .accessoryRectangular:
+        case .accessoryCircular, .accessoryInline, .accessoryRectangular:
             accessoryView
         #endif
         case .systemSmall:
@@ -31,7 +28,7 @@ struct SpendingWidgetView: View {
     // MARK: - Display Helpers Based on Configuration
     private var headerTitle: String {
         switch entry.configuration.displayMode {
-        case .remaining: return "Left"
+        case .remaining: return "Remaining"
         case .spent: return "Spent"
         case .percentage: return "Used"
         }
@@ -41,9 +38,9 @@ struct SpendingWidgetView: View {
         let remaining = entry.spendingLimit - entry.spent
         switch entry.configuration.displayMode {
         case .remaining:
-            return remaining.formatted(.currency(code: currencyCode))
+            return remaining.formatted(.currency(code: entry.currencyCode))
         case .spent:
-            return entry.spent.formatted(.currency(code: currencyCode))
+            return entry.spent.formatted(.currency(code: entry.currencyCode))
         case .percentage:
             let limit = NSDecimalNumber(decimal: entry.spendingLimit).doubleValue
             guard limit > 0 else { return "0%" }
@@ -55,69 +52,144 @@ struct SpendingWidgetView: View {
 
     // MARK: - Standard Widget Views
     private var smallWidgetView: some View {
+        let remaining = entry.spendingLimit - entry.spent
+        let progress = entry.spendingLimit > 0
+            ? Double(truncating: (entry.spent / entry.spendingLimit) as NSNumber)
+            : 0.0
+        let isOverBudget = remaining < 0
+        let statusColor: Color = isOverBudget ? .red : .green
 
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: "creditcard.fill")
-                    .font(.caption)
+        return VStack(alignment: .leading, spacing: 0) {
+            // MARK: - Header (Icon & Name)
+            HStack(spacing: 4) {
+                if let displayIcon = entry.iconString, !displayIcon.isEmpty {
+                    Image(systemName: displayIcon)
+                        .font(.caption2)
+                        .foregroundStyle(statusColor)
+                }
+                Text(entry.name)
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
-                Text(headerTitle)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
 
             Spacer()
 
-            Text(primaryDisplayValue)
-                .font(.system(.title, design: .rounded, weight: .bold))
-                .minimumScaleFactor(0.7)
-                .lineLimit(1)
+            // MARK: - Hero Metric (Based on displayMode configuration)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(isOverBudget && entry.configuration.displayMode == .remaining ? "Over Budget" : headerTitle)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+
+                Text(primaryDisplayValue)
+                    .font(.system(.title2, design: .rounded, weight: .bold))
+                    .foregroundStyle(statusColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+            }
 
             Spacer()
 
-            ProgressView(value: progressValue)
-                .tint((entry.spendingLimit - entry.spent) >= 0 ? .green : .red)
+            // MARK: - Progress & Limit Context
+            VStack(alignment: .leading, spacing: 6) {
+                ProgressView(value: max(0, min(1, 1.0 - progress)))
+                    .tint(statusColor)
 
-            HStack {
-                Text("Limit: \(entry.spendingLimit, format: .currency(code: currencyCode))")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                HStack {
+                    Text("Limit")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(entry.spendingLimit, format: .currency(code: entry.currencyCode))
+                        .fontWeight(.medium)
+                }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
             }
         }
         .containerBackground(for: .widget) { Color.clear }
     }
 
     private var mediumWidgetView: some View {
-        HStack(spacing: 16) {
-            smallWidgetView
+        let remaining = entry.spendingLimit - entry.spent
+        let progress = entry.spendingLimit > 0
+            ? Double(truncating: (entry.spent / entry.spendingLimit) as NSNumber)
+            : 0.0
+        let isOverBudget = remaining < 0
+        let statusColor: Color = isOverBudget ? .red : .green
 
+        return VStack {
+            HStack {
+                HStack(spacing: 6) {
+                    if let displayIcon = entry.iconString, !displayIcon.isEmpty {
+                        Image(systemName: displayIcon)
+                            .font(.caption)
+                            .foregroundStyle(statusColor)
+                    }
+                    Text(entry.name)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                Text("ExpenSee")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            // MARK: - Hero Values (Remaining vs Spent)
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Remaining")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Text(remaining, format: .currency(code: entry.currencyCode))
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(statusColor)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+
+                Spacer(minLength: 16)
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("Spent")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Text(entry.spent, format: .currency(code: entry.currencyCode))
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+            }
+
+            // MARK: - Progress Gauge
+            ProgressView(value: max(0, min(1, 1.0 - progress)))
+                .tint(statusColor)
+
+            // MARK: - Footer Details (Conditional Category Breakdown)
             if entry.configuration.showCategoryBreakdown {
-                Divider()
-
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("Spent Today")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Text(entry.spent, format: .currency(code: currencyCode))
-                            .fontWeight(.semibold)
+                HStack {
+                    HStack(spacing: 4) {
+                        Text("\(Int(progress * 100))% used")
                     }
-
-                    HStack {
-                        Text("Daily Base")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Text(entry.spendingLimit, format: .currency(code: currencyCode))
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                    }
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
 
                     Spacer()
+
+                    HStack(spacing: 2) {
+                        Text("Limit: ")
+                            .foregroundStyle(.secondary)
+                        Text(entry.spendingLimit, format: .currency(code: entry.currencyCode))
+                            .fontWeight(.bold)
+                    }
+                    .font(.caption2)
                 }
-                .padding(.vertical, 4)
             }
         }
         .containerBackground(for: .widget) { Color.clear }
@@ -140,19 +212,29 @@ struct SpendingWidgetView: View {
             .gaugeStyle(.accessoryCircularCapacity)
             .tint(isOverBudget ? Color.red : Color.primary)
             .containerBackground(for: .widget) { Color.clear }
+        } else if family == .accessoryInline {
+            let remaining = entry.spendingLimit - entry.spent
+            let isOverBudget = remaining < 0
+            let icon = entry.iconString
+
+            Label {
+                Text("\(entry.currencyCode) \(remaining, format: .number.precision(.fractionLength(0)))")
+            } icon: {
+                Image(systemName: (isOverBudget ? "exclamationmark.triangle.fill" : icon) ?? "dollarsign.circle.fill")
+            }
         } else {
             let remaining = entry.spendingLimit - entry.spent
             VStack(alignment: .leading) {
                 Text(entry.name)
                     .font(.caption)
-                Text(remaining, format: .currency(code: currencyCode))
+                Text(remaining, format: .currency(code: entry.currencyCode))
                     .font(.headline)
                     .fontWeight(.bold)
                 ProgressView(value: progressValue)
                     .tint(remaining >= 0 ? .green : .red)
-                HStack() {
+                HStack {
                     Spacer()
-                    Text("From \(entry.spendingLimit, format: .currency(code: currencyCode))")
+                    Text("From \(entry.spendingLimit, format: .currency(code: entry.currencyCode))")
                         .font(.footnote)
                 }
             }
@@ -164,7 +246,7 @@ struct SpendingWidgetView: View {
     private var progressValue: Double {
         let limit = NSDecimalNumber(decimal: entry.spendingLimit).doubleValue
         guard limit > 0 else { return 0 }
-        let remaining = NSDecimalNumber(decimal:  entry.spendingLimit - entry.spent).doubleValue
+        let remaining = NSDecimalNumber(decimal: entry.spendingLimit - entry.spent).doubleValue
         return max(0, min(1, remaining / limit))
     }
 }
@@ -177,6 +259,8 @@ struct SpendingWidgetView: View {
         spendingLimit: 100.00,
         spent: 57.50,
         configuration: ConfigurationAppIntent(),
+        currencyCode: "USD",
+        iconString: "creditcard.fill",
         name: "Daily"
     )
     SpendingEntry(
@@ -184,6 +268,8 @@ struct SpendingWidgetView: View {
         spendingLimit: 100.00,
         spent: 115.00,
         configuration: ConfigurationAppIntent(),
+        currencyCode: "USD",
+        iconString: "creditcard.fill",
         name: "Daily"
     )
 }
@@ -196,6 +282,8 @@ struct SpendingWidgetView: View {
         spendingLimit: 100.00,
         spent: 57.50,
         configuration: ConfigurationAppIntent(),
+        currencyCode: "USD",
+        iconString: "creditcard.fill",
         name: "Daily"
     )
 }
@@ -209,6 +297,8 @@ struct SpendingWidgetView: View {
         spendingLimit: 100.00,
         spent: 57.50,
         configuration: ConfigurationAppIntent(),
+        currencyCode: "USD",
+        iconString: "creditcard.fill",
         name: "Daily"
     )
     SpendingEntry(
@@ -216,6 +306,31 @@ struct SpendingWidgetView: View {
         spendingLimit: 100.00,
         spent: 520.50,
         configuration: ConfigurationAppIntent(),
+        currencyCode: "USD",
+        iconString: "creditcard.fill",
+        name: "Daily"
+    )
+}
+
+#Preview("Inline Lock Screen", as: .accessoryInline) {
+    SpendingWidget()
+} timeline: {
+    SpendingEntry(
+        date: .now,
+        spendingLimit: 100.00,
+        spent: 57.50,
+        configuration: ConfigurationAppIntent(),
+        currencyCode: "USD",
+        iconString: "creditcard.fill",
+        name: "Daily"
+    )
+    SpendingEntry(
+        date: .now,
+        spendingLimit: 100.00,
+        spent: 520.50,
+        configuration: ConfigurationAppIntent(),
+        currencyCode: "USD",
+        iconString: "creditcard.fill",
         name: "Daily"
     )
 }
@@ -228,6 +343,8 @@ struct SpendingWidgetView: View {
         spendingLimit: 100.00,
         spent: 57.50,
         configuration: ConfigurationAppIntent(),
+        currencyCode: "USD",
+        iconString: "creditcard.fill",
         name: "Daily"
     )
 }

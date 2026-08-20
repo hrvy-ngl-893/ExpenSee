@@ -45,29 +45,22 @@ public final class LiveActivityManager: ObservableObject {
             lastExpenseCategory: lastExpenseCategory
         )
         
-        // If an activity is already active with a matching budget cycle name, update it.
+        // If an activity is already active with a matching budget cycle name, update it silently.
         if let activity = currentActivity, activity.activityState == .active {
             if activity.attributes.budgetCycleName == budgetCycleName {
                 Task {
-                    // Alert configuration signals high priority update to Dynamic Island
-                    let alertConfig = AlertConfiguration(
-                        title: "\(currencyCode) Updated",
-                        body: "Currency updated in Live Activity",
-                        sound: .default
-                    )
-                    
+                    // Perform silent update without alertConfiguration (no chime or vibration)
                     await activity.update(
                         ActivityContent<LiveActivityAttributes.ContentState>(
                             state: state,
                             staleDate: nil
-                        ),
-                        alertConfiguration: alertConfig
+                        )
                     )
                     WidgetCenter.shared.reloadAllTimelines()
                 }
                 return
             } else {
-                // If the selected budget changed, end the current activity first to apply new attributes.
+                // If the selected budget changed, end current activity first to apply new attributes.
                 endActivitySync()
             }
         }

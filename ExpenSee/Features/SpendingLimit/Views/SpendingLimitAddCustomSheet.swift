@@ -1,107 +1,64 @@
 //
-//  SpendingLimitUpdateSheet.swift
+//  SpendingLimitAddCustomSheet.swift
 //  ExpenSee
 //
 //  Created by Harvy Angelo Tan on 8/16/26.
 //
 
 import SwiftUI
-import ExpenSeeCore
 import SwiftData
+import ExpenSeeCore
 
-struct SpendingLimitUpdateSheet: View {
+struct SpendingLimitAddCustomSheet: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var settings: SettingsViewModel
     
     @Query private var categories: [SpendingCategory]
     @Query private var accounts: [Account]
     
-    @Bindable var viewModel: SpendingLimitViewModel
-    let existingSpendingLimit: SpendingLimit?
-    let currencyCode: String
-    let account: Account?
+    var viewModel: SpendingLimitViewModel
+    var existingSpendingLimit: SpendingLimit? = nil
     
-    @State private var name: String
-    @State private var selectedFrequency: RecurrenceFrequency
-    @State private var limitText: String
-    @State private var selectedCategory: SpendingCategory?
-    @State private var selectedAccount: Account?
+    @State private var name = ""
+    @State private var amountText = ""
+    @State private var selectedCategory: SpendingCategory? = nil
+    @State private var selectedAccount: Account? = nil
     
-    // Custom Period State
-    @State private var startDate: Date
-    @State private var hasEndDate: Bool
-    @State private var endDate: Date
-    @State private var isRepeating: Bool
-    @State private var repeatFrequency: RecurrenceFrequency
+    // Period & Recurrence State
+    @State private var selectedPeriod: RecurrenceFrequency = .custom
+    @State private var startDate = Date()
+    @State private var hasEndDate = false
+    @State private var endDate = Date().addingTimeInterval(86400 * 30) // Default 30 days
     
-    @State private var selectedCurrencyCode: String
+    @State private var isRepeating = false
+    @State private var repeatFrequency: RecurrenceFrequency = .monthly
     
-    init(
-        viewModel: SpendingLimitViewModel,
-        existingSpendingLimit: SpendingLimit? = nil,
-        currencyCode: String = Locale.current.currency?.identifier ?? "USD",
-        account: Account? = nil
-    ) {
-        self.viewModel = viewModel
-        self.existingSpendingLimit = existingSpendingLimit
-        self.currencyCode = existingSpendingLimit?.currencyCode ?? account?.currencyCode ?? currencyCode
-        self.account = existingSpendingLimit?.account ?? account
-        
-        _name = State(initialValue: existingSpendingLimit?.name ?? "")
-        _selectedFrequency = State(initialValue: existingSpendingLimit?.period ?? .daily)
-        _selectedCategory = State(initialValue: existingSpendingLimit?.categories.first)
-        _selectedAccount = State(initialValue: existingSpendingLimit?.account ?? account)
-        
-        if let limit = existingSpendingLimit?.limitAmount {
-            _limitText = State(initialValue: "\(limit)")
-        } else {
-            _limitText = State(initialValue: "")
-        }
-        
-        _startDate = State(initialValue: existingSpendingLimit?.startDate ?? Date())
-        _selectedCurrencyCode = State(initialValue: existingSpendingLimit?.currencyCode ?? currencyCode)
-        
-        if let expDate = existingSpendingLimit?.endDate {
-            _hasEndDate = State(initialValue: true)
-            _endDate = State(initialValue: expDate)
-        } else {
-            _hasEndDate = State(initialValue: false)
-            _endDate = State(initialValue: Date().addingTimeInterval(86400 * 30))
-        }
-        
-        if let freq = existingSpendingLimit?.repeatFrequency {
-            _isRepeating = State(initialValue: true)
-            _repeatFrequency = State(initialValue: freq)
-        } else {
-            _isRepeating = State(initialValue: false)
-            _repeatFrequency = State(initialValue: .monthly)
-        }
+    private var isEditing: Bool {
+        existingSpendingLimit != nil
     }
     
     private var activeCurrencyCode: String {
-        selectedAccount?.currencyCode ?? currencyCode
+        selectedAccount?.currencyCode ?? settings.currencyCode
     }
     
     var body: some View {
         NavigationStack {
             Form {
-                // MARK: - Core Cadence & Scope
-                Section("Cadence & Scope") {
-                    Picker("Period", selection: $selectedFrequency) {
+                // MARK: - Core Scope
+                Section("Spending Limit Scope") {
+                    TextField("Spending Limit Name (e.g., Vacation, Groceries)", text: $name)
+                    
+                    Picker("Limit Type", selection: $selectedPeriod) {
                         ForEach(RecurrenceFrequency.allCases, id: \.self) { frequency in
                             Text(frequency.displayName).tag(frequency)
                         }
                     }
-                    .pickerStyle(.menu)
-                    
-                    if selectedFrequency == .custom {
-                        TextField("Name (e.g., Vacation, Groceries)", text: $name)
-                    }
                     
                     Picker("Account Scope", selection: $selectedAccount) {
-                        Text("All Accounts (\(currencyCode))").tag(nil as Account?)
-                        ForEach(accounts) { accountItem in
-                            Text("\(accountItem.name) (\(accountItem.currencyCode))").tag(accountItem as Account?)
+                        Text("All Accounts (\(settings.currencyCode))").tag(nil as Account?)
+                        ForEach(accounts) { account in
+                            Text("\(account.name) (\(account.currencyCode))").tag(account as Account?)
                         }
                     }
                     
@@ -111,14 +68,11 @@ struct SpendingLimitUpdateSheet: View {
                             Text(category.name).tag(category as SpendingCategory?)
                         }
                     }
-                }
-                
-                // MARK: - Allowance Section
-                Section("Allowance") {
+                    
                     HStack {
-                        Text("Limit Amount")
+                        Text("Limit")
                         Spacer()
-                        TextField("Amount (\(activeCurrencyCode))", text: $limitText)
+                        TextField("Amount (\(activeCurrencyCode))", text: $amountText)
                             .multilineTextAlignment(.trailing)
                             #if os(iOS)
                             .keyboardType(.decimalPad)
@@ -127,7 +81,7 @@ struct SpendingLimitUpdateSheet: View {
                 }
                 
                 // MARK: - Dynamic Type-Based Sections
-                if selectedFrequency == .custom {
+                if selectedPeriod == .custom {
                     Section("Duration") {
                         DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
                         
@@ -151,13 +105,13 @@ struct SpendingLimitUpdateSheet: View {
                     }
                 } else {
                     Section {
-                        Text("This limit will reset automatically on a **\(selectedFrequency.displayName.lowercased())** basis.")
+                        Text("This limit will reset automatically on a **\(selectedPeriod.displayName.lowercased())** basis.")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
                 }
             }
-            .navigationTitle(existingSpendingLimit == nil ? "Set Spending Limit" : "Configure Spending Limit")
+            .navigationTitle(isEditing ? "Edit Spending Limit" : "New Spending Limit")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
@@ -166,39 +120,65 @@ struct SpendingLimitUpdateSheet: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
-                        .disabled(limitText.trimmingCharacters(in: .whitespaces).isEmpty)
+                    Button(isEditing ? "Update" : "Save") { save() }
+                        .disabled(amountText.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
+            .onAppear(perform: populateExistingData)
+        }
+    }
+    
+    private func populateExistingData() {
+        guard let spendingLimit = existingSpendingLimit else { return }
+        
+        name = spendingLimit.name
+        amountText = "\(spendingLimit.limitAmount)"
+        selectedCategory = spendingLimit.categories.first
+        selectedAccount = spendingLimit.account
+        selectedPeriod = spendingLimit.period
+        startDate = spendingLimit.startDate
+        
+        if let expDate = spendingLimit.endDate {
+            hasEndDate = true
+            endDate = expDate
+        } else {
+            hasEndDate = false
+        }
+        
+        if let freq = spendingLimit.repeatFrequency {
+            isRepeating = true
+            repeatFrequency = freq
+        } else {
+            isRepeating = false
         }
     }
     
     private func save() {
-        let filtered = limitText.replacingOccurrences(of: ",", with: ".")
+        let filtered = amountText.replacingOccurrences(of: ",", with: ".")
         let cleanedText = filtered.components(separatedBy: CharacterSet(charactersIn: "0123456789.").inverted).joined()
         
-        guard let newLimit = Decimal(string: cleanedText), newLimit > 0 else { return }
+        guard let amount = Decimal(string: cleanedText), amount > 0 else { return }
         
-        if selectedFrequency != .custom {
-            // Save standard frequency budget (Daily, Weekly, Monthly, Yearly)
+        if selectedPeriod != .custom {
+            // Save standard frequency limit (Daily, Weekly, Monthly, Yearly)
             viewModel.saveStandardSpendingLimit(
                 context: context,
-                period: selectedFrequency,
-                limitAmount: newLimit,
+                period: selectedPeriod,
+                limitAmount: amount,
                 currencyCode: activeCurrencyCode,
                 account: selectedAccount,
                 category: selectedCategory,
-                name: name.isEmpty ? nil : name,
+                name: name,
                 existingLimit: existingSpendingLimit
             )
         } else {
-            // Save custom duration & recurrence budget
+            // Save custom duration & recurrence limit
             if let spendingLimit = existingSpendingLimit {
                 viewModel.updateAssignableSpendingLimit(
                     context: context,
                     spendingLimit: spendingLimit,
                     name: name,
-                    limitAmount: newLimit,
+                    limitAmount: amount,
                     currencyCode: activeCurrencyCode,
                     account: selectedAccount,
                     startDate: startDate,
@@ -210,7 +190,7 @@ struct SpendingLimitUpdateSheet: View {
                 viewModel.createAssignableSpendingLimit(
                     context: context,
                     name: name,
-                    limitAmount: newLimit,
+                    limitAmount: amount,
                     currencyCode: activeCurrencyCode,
                     account: selectedAccount,
                     startDate: startDate,

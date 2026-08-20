@@ -24,7 +24,7 @@ struct SpendingWidget: Widget {
         .configurationDisplayName("Spending")
         .description("Keep track of your daily limit and spending in real time.")
         #if os(iOS)
-        .supportedFamilies([.systemSmall, .systemMedium, .accessoryCircular, .accessoryRectangular])
+        .supportedFamilies([.systemSmall, .systemMedium, .accessoryCircular, .accessoryRectangular, .accessoryInline])
         #endif
     }
 }
@@ -38,6 +38,8 @@ struct SpendingWidget: Widget {
         spendingLimit: 100.00,
         spent: 57.50,
         configuration: ConfigurationAppIntent(),
+        currencyCode: "USD",
+        iconString: "creditcard.fill",
         name: "Daily"
     )
     SpendingEntry(
@@ -45,6 +47,8 @@ struct SpendingWidget: Widget {
         spendingLimit: 100.00,
         spent: 115.00,
         configuration: ConfigurationAppIntent(),
+        currencyCode: "USD",
+        iconString: "creditcard.fill",
         name: "Daily"
     )
 }
@@ -57,6 +61,8 @@ struct SpendingWidget: Widget {
         spendingLimit: 100.00,
         spent: 57.50,
         configuration: ConfigurationAppIntent(),
+        currencyCode: "USD",
+        iconString: "creditcard.fill",
         name: "Daily"
     )
 }
@@ -70,6 +76,8 @@ struct SpendingWidget: Widget {
         spendingLimit: 100.00,
         spent: 57.50,
         configuration: ConfigurationAppIntent(),
+        currencyCode: "USD",
+        iconString: "creditcard.fill",
         name: "Daily"
     )
     SpendingEntry(
@@ -77,6 +85,31 @@ struct SpendingWidget: Widget {
         spendingLimit: 100.00,
         spent: 520.50,
         configuration: ConfigurationAppIntent(),
+        currencyCode: "USD",
+        iconString: "creditcard.fill",
+        name: "Daily"
+    )
+}
+
+#Preview("Inline Lock Screen", as: .accessoryInline) {
+    SpendingWidget()
+} timeline: {
+    SpendingEntry(
+        date: .now,
+        spendingLimit: 100.00,
+        spent: 57.50,
+        configuration: ConfigurationAppIntent(),
+        currencyCode: "USD",
+        iconString: "creditcard.fill",
+        name: "Daily"
+    )
+    SpendingEntry(
+        date: .now,
+        spendingLimit: 100.00,
+        spent: 520.50,
+        configuration: ConfigurationAppIntent(),
+        currencyCode: "USD",
+        iconString: "creditcard.fill",
         name: "Daily"
     )
 }
@@ -89,6 +122,8 @@ struct SpendingWidget: Widget {
         spendingLimit: 100.00,
         spent: 57.50,
         configuration: ConfigurationAppIntent(),
+        currencyCode: "USD",
+        iconString: "creditcard.fill",
         name: "Daily"
     )
 }

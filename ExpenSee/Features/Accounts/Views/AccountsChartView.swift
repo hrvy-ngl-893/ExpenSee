@@ -75,7 +75,6 @@ public struct AccountsChartView: View {
             .padding(.horizontal, 4)
         }
         .padding()
-        .background(.background.secondary)
     }
 
     private func currencyText(_ amount: Decimal, code: String) -> some View {

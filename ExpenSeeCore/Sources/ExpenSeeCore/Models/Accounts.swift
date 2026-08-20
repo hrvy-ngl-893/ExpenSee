@@ -23,14 +23,15 @@ public final class Account: Identifiable {
     /// stored amounts are never rewritten into another currency.
     public var currencyCode: String = "USD"
 
-    /// Transactions where this account is the primary account (an expense,
-    /// an income entry, or the outgoing side of a transfer).
     @Relationship(deleteRule: .nullify, inverse: \Transaction.account)
     public var transactions: [Transaction] = []
 
-    /// Incoming legs of transfers where this account is the destination.
     @Relationship(deleteRule: .nullify, inverse: \Transaction.destinationAccount)
     public var incomingTransfers: [Transaction] = []
+
+    /// Spending limits scoped to this account specifically.
+    @Relationship(deleteRule: .nullify, inverse: \SpendingLimit.account)
+    public var spendingLimits: [SpendingLimit] = []
 
     public init(
         id: UUID = UUID(),

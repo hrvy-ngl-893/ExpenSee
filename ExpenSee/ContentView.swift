@@ -14,7 +14,7 @@ struct ContentView: View {
         case dashboard
         case analytics
         case sources
-        case settings
+        case transaction
     }
     
     @Binding var showAddExpenseSheet: Bool
@@ -30,21 +30,28 @@ struct ContentView: View {
             
             AccountsView()
                 .tabItem {
-                    Label("Source", systemImage: "creditcard.fill")
+                    Label("Accounts", systemImage: "creditcard.fill")
                 }
                 .tag(Tab.sources)
             
+            
+            
+            TransactionView()
+                .tabItem {
+                    Label("Transaction", systemImage: "dollarsign.arrow.circlepath")
+                }
+                .tag(Tab.transaction)
+            
+            SpendingLimitView()
+                .tabItem {
+                    Label("Budgets", systemImage: "dollarsign.circle.fill")
+                }
+                .tag(Tab.transaction)
             AnalyticsView()
                 .tabItem {
                     Label("Analytics", systemImage: "chart.pie")
                 }
                 .tag(Tab.analytics)
-            
-            SettingsView()
-                .tabItem {
-                    Label("Settings", systemImage: "gear")
-                }
-                .tag(Tab.settings)
         }
     }
 }

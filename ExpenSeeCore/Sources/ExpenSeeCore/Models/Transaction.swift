@@ -37,7 +37,7 @@ public final class Transaction: Identifiable {
     /// The account this transaction affects. For an expense or income, this
     /// is the only account involved. For a transfer, this is the source
     /// (debited) account.
-    @Relationship public var account: Account
+    @Relationship public var account: Account?
 
     /// Only set when `type == .transfer` — the account receiving the funds.
     @Relationship public var destinationAccount: Account?

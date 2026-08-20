@@ -15,6 +15,8 @@ struct SpendingEntry: TimelineEntry {
     let spendingLimit: Decimal
     let spent: Decimal
     let configuration: ConfigurationAppIntent
+    let currencyCode: String
+    let iconString: String?
     var name: String
 }
 
@@ -29,6 +31,8 @@ struct SpendingTimelineProvider: AppIntentTimelineProvider {
             spendingLimit: 100.00,
             spent: 57.50,
             configuration: ConfigurationAppIntent(),
+            currencyCode: Locale.current.currency?.identifier ?? "USD",
+            iconString: "creditcard.fill",
             name: "Daily"
         )
     }
@@ -49,40 +53,64 @@ struct SpendingTimelineProvider: AppIntentTimelineProvider {
         let budgetEngine = BudgetEngine()
         
         do {
-            let remaining = try budgetEngine.calculateRemainingToday(context: context)
+            var selectedBudget: SpendingLimit?
             
-            let dailyPeriodRaw = RecurrenceFrequency.daily.rawValue
-            var budgetDescriptor = FetchDescriptor<SpendingLimit>(
-                predicate: #Predicate<SpendingLimit> { $0.isActive && $0.periodRawValue == dailyPeriodRaw }
-            )
-            budgetDescriptor.fetchLimit = 1
-            let currentBudget = try context.fetch(budgetDescriptor).first
+            // 1. Fetch the specific budget chosen by the user in the widget edit screen
+            if let targetEntity = configuration.selectedBudget,
+               let targetUUID = UUID(uuidString: targetEntity.id) {
+                let descriptor = FetchDescriptor<SpendingLimit>(
+                    predicate: #Predicate<SpendingLimit> { $0.id == targetUUID && $0.isActive }
+                )
+                selectedBudget = try context.fetch(descriptor).first
+            }
             
-            let limitAmount = currentBudget?.limitAmount ?? 0
-            let cycleName = currentBudget?.name ?? "Daily"
-            
-            let calendar = Calendar.current
-            let startOfDay = calendar.startOfDay(for: Date())
-            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? Date()
-            
-            let records = try context.fetch(FetchDescriptor<ExpenSeeCore.Transaction>())
-            let spentToday = records.reduce(Decimal(0)) { $0 + $1.amount }
-            
+            // 2. Fallback to active daily budget if no budget was selected or if the selected one was deleted
+            if selectedBudget == nil {
+                let dailyPeriodRaw = RecurrenceFrequency.daily.rawValue
+                var fallbackDescriptor = FetchDescriptor<SpendingLimit>(
+                    predicate: #Predicate<SpendingLimit> { $0.isActive && $0.periodRawValue == dailyPeriodRaw }
+                )
+                fallbackDescriptor.fetchLimit = 1
+                selectedBudget = try context.fetch(fallbackDescriptor).first
+            }
+
+            guard let budget = selectedBudget else {
+                return emptyFallbackEntry(configuration: configuration)
+            }
+
+            // 3. Compute limits and total spent using BudgetEngine for the chosen budget
+            let limitAmount = budget.limitAmount
+            let remaining = try budgetEngine.calculateRemaining(for: budget, context: context)
+            let totalSpent = limitAmount - remaining
+
+            // Resolved Icon: Safe check for array-based categories with fallbacks
+            let resolvedIcon = budget.categories.first?.iconString
+                ?? budget.account?.iconString
+                ?? "creditcard.fill"
+
             return SpendingEntry(
                 date: Date(),
                 spendingLimit: limitAmount,
-                spent: spentToday,
+                spent: max(0, totalSpent),
                 configuration: configuration,
-                name: cycleName
+                currencyCode: budget.currencyCode,
+                iconString: resolvedIcon,
+                name: budget.name
             )
         } catch {
-            return SpendingEntry(
-                date: Date(),
-                spendingLimit: 0,
-                spent: 0,
-                configuration: configuration,
-                name: "Daily"
-            )
+            return emptyFallbackEntry(configuration: configuration)
         }
+    }
+
+    private func emptyFallbackEntry(configuration: ConfigurationAppIntent) -> SpendingEntry {
+        SpendingEntry(
+            date: Date(),
+            spendingLimit: 0,
+            spent: 0,
+            configuration: configuration,
+            currencyCode: Locale.current.currency?.identifier ?? "USD",
+            iconString: "creditcard.fill",
+            name: "No Budget"
+        )
     }
 }

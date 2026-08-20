@@ -36,11 +36,22 @@ struct SpendingLimitView: View {
                 ForEach(standardSpendingLimits) { spendingLimit in
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("\(spendingLimit.period.rawValue.capitalized) Limit")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                            HStack(spacing: 6) {
+                                Text("\(spendingLimit.period.rawValue.capitalized) Limit")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
 
-                            Text(spendingLimit.limitAmount, format: .currency(code: settings.currencyCode))
+                                if let accountName = spendingLimit.account?.name {
+                                    Text(accountName)
+                                        .font(.caption2)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Capsule().fill(Color(.tertiarySystemFill)))
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+
+                            Text(spendingLimit.limitAmount, format: .currency(code: spendingLimit.currencyCode))
                                 .font(.system(.title3, design: .rounded, weight: .bold))
                         }
 
@@ -64,7 +75,7 @@ struct SpendingLimitView: View {
                 }
             } header: {
                 HStack {
-                    Text("Global Period SpendingLimits")
+                    Text("Global Period Spending Limits")
                     Spacer()
                     Button {
                         selectedSpendingLimitForEdit = nil
@@ -87,21 +98,22 @@ struct SpendingLimitView: View {
                                 Text(spendingLimit.name)
                                     .font(.headline)
                                     .foregroundStyle(.primary)
+
                                 Spacer()
-                                Text(spendingLimit.limitAmount, format: .currency(code: settings.currencyCode))
+
+                                Text(spendingLimit.limitAmount, format: .currency(code: spendingLimit.currencyCode))
                                     .font(.headline)
                                     .foregroundStyle(.primary)
                             }
 
                             HStack {
-                                if let category = spendingLimit.category {
-                                    Label(category.name, systemImage: category.iconString)
+                                // Handles [SpendingCategory] multi-selection display
+                                categoryLabel(for: spendingLimit.categories)
+
+                                if let accountName = spendingLimit.account?.name {
+                                    Text("• \(accountName)")
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                } else {
-                                    Text("All Categories")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(.tertiary)
                                 }
 
                                 Spacer()
@@ -150,10 +162,35 @@ struct SpendingLimitView: View {
         .navigationBarTitleDisplayMode(.inline)
         #endif
         .sheet(isPresented: $showingEditStandardSheet, onDismiss: triggerWidgetSync) {
-            SpendingLimitUpdateSheet(viewModel: viewModel, existingSpendingLimit: selectedSpendingLimitForEdit)
+            SpendingLimitUpdateSheet(
+                viewModel: viewModel,
+                existingSpendingLimit: selectedSpendingLimitForEdit,
+                currencyCode: selectedSpendingLimitForEdit?.currencyCode ?? settings.currencyCode,
+                account: selectedSpendingLimitForEdit?.account
+            )
         }
         .sheet(isPresented: $showingAddAssignableSheet, onDismiss: triggerWidgetSync) {
-            AddAssignableSpendingLimitSheet(viewModel: viewModel, existingSpendingLimit: selectedSpendingLimitForEdit)
+            SpendingLimitAddCustomSheet(
+                viewModel: viewModel,
+                existingSpendingLimit: selectedSpendingLimitForEdit
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func categoryLabel(for categories: [SpendingCategory]) -> some View {
+        if categories.isEmpty {
+            Text("All Categories")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } else if categories.count == 1, let first = categories.first {
+            Label(first.name, systemImage: first.iconString)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } else if let first = categories.first {
+            Label("\(first.name) +\(categories.count - 1)", systemImage: first.iconString)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -173,7 +210,7 @@ struct SpendingLimitView: View {
 #Preview {
     NavigationStack {
         SpendingLimitView()
-            .modelContainer(ModelContainerFactory.shared)
+            .modelContainer(ModelContainerFactory.inMemoryPreview)
             .environmentObject(SettingsViewModel())
     }
 }
